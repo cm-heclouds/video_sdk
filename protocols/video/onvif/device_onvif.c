@@ -1,0 +1,747 @@
+#include <stdint.h>
+#include "namespace.h"
+#include "soapH.h"
+#include "device_onvif.h"
+#include "wsseapi.h"
+
+
+#define DEBUG 1
+
+#define M_ONVIFDEVICE_NUMBERS 10
+
+static device_onvif_list_t _gOnvifDevice = { 0 };
+
+
+int  ont_onvifdevice_capablity(const char *url, device_onvif_t *devicePtr);
+int  ont_onvifdevice_getplayurl(device_onvif_t *devicePtr, int profileindex);
+int  ont_onvifdevice_getprofile(device_onvif_t *devicePtr);
+int  ont_onvifdevice_getconfigurations(device_onvif_t *devicePtr);
+
+
+int  ont_onvifdevice_getconfigurations(device_onvif_t *devicePtr)
+{
+    struct _tptz__GetConfigurationOptions tptz__GetConfigurationOptions = { 0 };
+    struct _tptz__GetConfigurationOptionsResponse tptz__GetConfigurationOptionsResponse = { 0 };
+    struct tt__Space2DDescription *descrpion;
+    static struct soap *soap;
+    struct SOAP_ENV__Header header = { 0 };
+    int result = 0;
+
+    tptz__GetConfigurationOptions.ConfigurationToken = "PTZToken";
+    soap = soap_new();
+
+    soap_set_namespaces(soap, namespaces);
+    soap_default_SOAP_ENV__Header(soap, &header);
+    soap_wsse_add_Security(soap);
+    soap_wsse_add_UsernameTokenDigest(soap, "Id", (const char*)devicePtr->strUser, (const char*)devicePtr->strPass);
+    devicePtr->ptXrangeMin = -1.0;
+    devicePtr->ptXrangeMax = 1.0;
+    devicePtr->ptYrangeMin = -1.0;
+    devicePtr->ptYrangeMax = 1.0;
+    devicePtr->ptzTimeoutMin = 1000;
+    devicePtr->ptzTimeoutMax = 300000;
+    devicePtr->zoomRangeMin = -1.0;
+    devicePtr->zoomRangeMax = 1.0;
+
+    do
+    {
+		if (devicePtr->hasPTZ)
+        {
+            result = soap_call___tptz__GetConfigurationOptions(soap, devicePtr->strPTZ, NULL, &tptz__GetConfigurationOptions, &tptz__GetConfigurationOptionsResponse);
+            if (result != SOAP_OK)
+            {
+                printf("%s:%d,soap error: %d, %s, %s\n", __FILE__, __LINE__, soap->error, *soap_faultcode(soap), *soap_faultstring(soap));
+                break;
+            }
+            if (tptz__GetConfigurationOptionsResponse.PTZConfigurationOptions && tptz__GetConfigurationOptionsResponse.PTZConfigurationOptions->Spaces && tptz__GetConfigurationOptionsResponse.PTZConfigurationOptions->Spaces->ContinuousPanTiltVelocitySpace)
+            {
+                descrpion = tptz__GetConfigurationOptionsResponse.PTZConfigurationOptions->Spaces->ContinuousPanTiltVelocitySpace;
+            }
+
+            if (descrpion)
+            {
+                devicePtr->ptXrangeMin = descrpion->XRange->Min;
+                devicePtr->ptXrangeMax = descrpion->XRange->Max;
+                devicePtr->ptYrangeMin = descrpion->YRange->Min;
+                devicePtr->ptYrangeMax = descrpion->YRange->Max;
+                if (tptz__GetConfigurationOptionsResponse.PTZConfigurationOptions->PTZTimeout)
+                {
+                    devicePtr->ptzTimeoutMin = tptz__GetConfigurationOptionsResponse.PTZConfigurationOptions->PTZTimeout->Min;
+                    devicePtr->ptzTimeoutMax = tptz__GetConfigurationOptionsResponse.PTZConfigurationOptions->PTZTimeout->Max;
+                }
+                devicePtr->zoomRangeMin = tptz__GetConfigurationOptionsResponse.PTZConfigurationOptions->Spaces->ContinuousZoomVelocitySpace->XRange->Min;
+                devicePtr->zoomRangeMax = tptz__GetConfigurationOptionsResponse.PTZConfigurationOptions->Spaces->ContinuousZoomVelocitySpace->XRange->Max;
+
+            }
+        }
+    } while (0);
+
+    soap_wsse_delete_Security(soap);
+    soap_wsse_verify_done(soap);
+    soap_destroy(soap);
+    soap_end(soap);
+    soap_done(soap);
+    soap_free(soap);
+
+    return result;
+}
+
+
+int  ont_onvifdevice_getprofile(device_onvif_t *devicePtr)
+{
+    struct _trt__GetProfiles trt__GetProfile = { 0 };
+    struct _trt__GetProfilesResponse trt__Response = { 0 };
+    static struct soap *soap;
+    struct SOAP_ENV__Header header = { 0 };
+    int i = 0;
+    int result = 0;
+    soap = soap_new();
+
+    soap_set_namespaces(soap, namespaces);
+    soap_default_SOAP_ENV__Header(soap, &header);
+    soap_wsse_add_Security(soap);
+    soap_wsse_add_UsernameTokenDigest(soap, "Id", (const char*)devicePtr->strUser, (const char*)devicePtr->strPass);
+    do 
+    {
+        if (devicePtr->hasMedia)
+        {
+            result = soap_call___trt__GetProfiles(soap, devicePtr->strMedia, NULL, &trt__GetProfile, &trt__Response);
+            if (result != SOAP_OK)
+            {
+                result = soap->error;
+                printf("%s:%d,soap error: %d, %s, %s\n", __FILE__, __LINE__, soap->error, *soap_faultcode(soap), *soap_faultstring(soap));
+                break;
+            }
+            else
+            {
+                for (i = 0; i<trt__Response.__sizeProfiles; i++)
+                {
+
+                    if (trt__Response.Profiles[i].Name != NULL)
+                    {
+
+                    }
+                    if (trt__Response.Profiles[i].token != NULL)
+                    {
+                        memcpy(devicePtr->profiles[i].strprofile, trt__Response.Profiles[i].token, strlen(trt__Response.Profiles[i].token));
+						devicePtr->profiles[i].level = trt__Response.__sizeProfiles - i;
+					}
+                    if (trt__Response.Profiles[i].VideoEncoderConfiguration)
+                    {
+                        struct tt__VideoEncoderConfiguration *pVideoConfig = trt__Response.Profiles[i].VideoEncoderConfiguration;
+                        if (pVideoConfig->Encoding == tt__VideoEncoding__H264)
+                        {
+							devicePtr->profiles[i].height = pVideoConfig->Resolution->Height;
+							devicePtr->profiles[i].width = pVideoConfig->Resolution->Width;
+                            if (pVideoConfig->RateControl)
+                            {
+								devicePtr->profiles[i].framterate= pVideoConfig->RateControl->FrameRateLimit;
+								devicePtr->profiles[i].bitrate = pVideoConfig->RateControl->BitrateLimit;
+                            }
+                        }
+                    }
+
+                    if (trt__Response.Profiles[i].PTZConfiguration)
+                    {
+                        if (trt__Response.Profiles[i].PTZConfiguration->DefaultContinuousPanTiltVelocitySpace)
+                        {
+                            devicePtr->hasCoutinusPanTilt = 1;
+                        }
+                        if (trt__Response.Profiles[i].PTZConfiguration->DefaultContinuousZoomVelocitySpace)
+                        {
+                            devicePtr->hasCoutinusZoom = 1;
+                        }
+                    }
+                }
+            }
+        }
+    } while (0);
+
+    soap_wsse_delete_Security(soap);
+    soap_wsse_verify_done(soap);
+    soap_destroy(soap);
+    soap_end(soap);
+    soap_done(soap);
+    soap_free(soap);
+
+    return result;
+}
+
+int  ont_onvifdevice_capablity( const char *url, device_onvif_t *devicePtr)
+{
+    static struct soap *soap;
+    struct SOAP_ENV__Header header = { 0 };
+    const char* soap_endpoint = url;
+    int i = 0;
+    int result = 0;
+    struct _tds__GetCapabilities _Capabilities = { 0 };
+    struct tt__Capabilities *items = NULL;
+    struct _tds__GetCapabilitiesResponse __GetCapabilitiesResponse = { 0 };
+    enum tt__CapabilityCategory _eCapAll[1] = { tt__CapabilityCategory__All };
+
+    _Capabilities.__sizeCategory = 1;
+    _Capabilities.Category = _eCapAll;
+
+    soap = soap_new();
+    soap_set_namespaces(soap, namespaces);
+    soap_default_SOAP_ENV__Header(soap, &header);
+    soap_wsse_add_Security(soap);
+    soap_wsse_add_UsernameTokenDigest(soap, "Id", (const char*)devicePtr->strUser, (const char*)devicePtr->strPass);
+
+    soap->recv_timeout = 10;
+
+    do 
+    {
+        result = soap_call___tds__GetCapabilities(soap, soap_endpoint, NULL, &_Capabilities, &__GetCapabilitiesResponse);
+        if (result != SOAP_OK)
+        {
+            printf("%s:%d,soap error: %d, %s, %s\n", __FILE__, __LINE__, soap->error, *soap_faultcode(soap), *soap_faultstring(soap));
+            break;
+        }
+
+        for (i = 0; i < _Capabilities.__sizeCategory; i++)
+        {
+            if (__GetCapabilitiesResponse.Capabilities != NULL)
+            {
+                items = __GetCapabilitiesResponse.Capabilities;
+                /* Media */
+                if (items->Media != NULL)
+                {
+                    strncpy(devicePtr->strMedia, items->Media->XAddr, sizeof(devicePtr->strMedia));
+                    devicePtr->hasMedia = 1;
+                }
+
+                /* PTZ */
+                if (items->PTZ != NULL)
+                {
+                    devicePtr->hasPTZ = 1;
+                    strncpy(devicePtr->strPTZ, items->PTZ->XAddr, sizeof(devicePtr->strPTZ));
+                }
+
+                /* Event */
+                if (items->Events != NULL)
+                {
+                    devicePtr->hasEvent = 1;
+                    strncpy(devicePtr->strEvent, items->Events->XAddr, sizeof(devicePtr->strEvent));
+                }
+
+                /* Imaging */
+                if (items->Imaging != NULL)
+                {
+                    devicePtr->hasImaging = 1;
+                    strncpy(devicePtr->strImaging, items->Imaging->XAddr, sizeof(devicePtr->strImaging));
+                }
+
+                /* Extension */
+                if (items->Extension != NULL)
+                {
+                    /* Receiver */
+                    if (items->Extension->Receiver != NULL)
+                    {
+                        devicePtr->hasReceiver = 1;
+                        strncpy(devicePtr->strReceiver, items->Extension->Receiver->XAddr, sizeof(devicePtr->strReceiver));
+                    }
+                    /* Recording */
+                    if (items->Extension->Recording != NULL)
+                    {
+                        devicePtr->hasRecording = 1;
+                        strncpy(devicePtr->strRecording, items->Extension->Recording->XAddr, sizeof(devicePtr->strRecording));
+                    }
+                    /* Search */
+                    if (items->Extension->Search != NULL)
+                    {
+                        devicePtr->hasSearch = 1;
+                        strncpy(devicePtr->strSearch, items->Extension->Search->XAddr, sizeof(devicePtr->strSearch));
+                    }
+                    /* Replay */
+                    if (items->Extension->Replay != NULL)
+                    {
+                        devicePtr->hasReplay = 1;
+                        strncpy(devicePtr->strReplay, items->Extension->Replay->XAddr, sizeof(devicePtr->strReplay));
+                    }
+                }
+
+                break; /*only get one device*/
+            }
+        }
+    } while (0);
+
+
+    
+    soap_wsse_delete_Security(soap);
+    soap_wsse_verify_done(soap);
+    soap_destroy(soap);
+    soap_end(soap);
+    soap_done(soap);
+    soap_free(soap);
+
+    return result;
+
+}
+
+int  ont_onvifdevice_getplayurl(device_onvif_t *devicePtr, int profileindex)
+{
+    struct _trt__GetStreamUri trt__GetStreamUri = { 0 };
+    struct _trt__GetStreamUriResponse trt__GetStreamUriResponse = { 0 };
+    struct tt__StreamSetup _tt__StreamSetup = { 0 };
+    struct tt__Transport tt__transport = { 0 };
+    int result = 0;
+    trt__GetStreamUri.StreamSetup = &_tt__StreamSetup;
+    trt__GetStreamUri.StreamSetup->Stream = 0;//stream type  
+
+    trt__GetStreamUri.StreamSetup->Transport = &tt__transport;
+    trt__GetStreamUri.StreamSetup->Transport->Protocol = 0;
+    trt__GetStreamUri.StreamSetup->Transport->Tunnel = 0;
+
+    trt__GetStreamUri.ProfileToken = devicePtr->profiles[profileindex].strprofile;
+    static struct soap *soap;
+    struct SOAP_ENV__Header header = { 0 };
+
+    soap = soap_new();
+    soap_set_namespaces(soap, namespaces);
+    soap_default_SOAP_ENV__Header(soap, &header);
+    soap_wsse_add_Security(soap);
+    soap_wsse_add_UsernameTokenDigest(soap, "Id", (const char*)devicePtr->strUser, (const char*)devicePtr->strPass);
+    soap->recv_timeout = 10;
+
+
+    do 
+    {
+        result = soap_call___trt__GetStreamUri(soap, devicePtr->strMedia, NULL, &trt__GetStreamUri, &trt__GetStreamUriResponse);
+        if (result != SOAP_OK)
+        {
+            printf("%s:%d,soap error: %d, %s, %s\n", __FILE__, __LINE__, soap->error, *soap_faultcode(soap), *soap_faultstring(soap));
+            break;
+        }
+        else
+        {
+            strncpy(devicePtr->profiles[profileindex].strPlayurl, trt__GetStreamUriResponse.MediaUri->Uri, sizeof(devicePtr->profiles[profileindex].strPlayurl));
+        }
+    } while (0);
+
+    soap_wsse_delete_Security(soap);
+    soap_wsse_verify_done(soap);
+    soap_destroy(soap);
+    soap_end(soap);
+    soap_done(soap);
+    soap_free(soap);
+
+    return result;
+}
+
+/*#include "namespace.h"*/
+
+void ont_gen_uuid(char _HwId[1024])
+{
+	unsigned char macaddr[6];
+	unsigned int Flagrand;
+
+	srand((int)time(0));
+	Flagrand = rand() % 9000 + 1000;
+	macaddr[0] = 0x1; macaddr[1] = 0x2; macaddr[2] = 0x3; macaddr[3] = 0x4; macaddr[4] = 0x5; macaddr[5] = 0x6;
+
+	sprintf(_HwId, "urn:uuid:%ud68b-1dd2-11b2-a105-%02X%02X%02X%02X%02X%02X",
+		Flagrand, macaddr[0], macaddr[1], macaddr[2], macaddr[3], macaddr[4], macaddr[5]);
+
+}
+
+static struct soap* ont_onvif_initsoap(struct SOAP_ENV__Header *header, const char *was_To, const char *was_Action, int timeout)
+{
+	struct soap *soap = NULL;
+	unsigned char macaddr[6];
+	char _HwId[1024];
+	unsigned int Flagrand;
+	soap = soap_new();
+	if (soap == NULL)
+	{
+		printf("[%d]soap = NULL\n", __LINE__);
+		return NULL;
+	}
+	soap_set_namespaces(soap, namespaces);
+
+	if (timeout > 0)
+	{
+		soap->recv_timeout = timeout;
+		soap->send_timeout = timeout;
+		soap->connect_timeout = timeout;
+	}
+	else
+	{
+		soap->recv_timeout = 10;
+		soap->send_timeout = 10;
+		soap->connect_timeout = 10;
+	}
+	soap_default_SOAP_ENV__Header(soap, header);
+
+	srand((int)time(0));
+	Flagrand = rand() % 9000 + 1000; 
+	macaddr[0] = 0x1; macaddr[1] = 0x2; macaddr[2] = 0x3; macaddr[3] = 0x4; macaddr[4] = 0x5; macaddr[5] = 0x6;
+
+	sprintf(_HwId, "urn:uuid:%ud68b-1dd2-11b2-a105-%02X%02X%02X%02X%02X%02X",
+		Flagrand, macaddr[0], macaddr[1], macaddr[2], macaddr[3], macaddr[4], macaddr[5]);
+
+	header->wsa5__MessageID = (char *)malloc(100);
+	memset(header->wsa5__MessageID, 0, 100);
+	strncpy(header->wsa5__MessageID, "uuid:9543d68b-1dd2-11b2-a105-010203040506", strlen("uuid:9543d68b-1dd2-11b2-a105-010203040506"));
+
+	if (was_Action != NULL)
+	{
+		header->wsa5__Action = (char *)malloc(1024);
+		memset(header->wsa5__Action, '\0', 1024);
+		strncpy(header->wsa5__Action, was_Action, 1024);//"http://schemas.xmlsoap.org/ws/2005/04/discovery/Probe";
+	}
+	if (was_To != NULL)
+	{
+		header->wsa5__To = (char *)malloc(1024);
+		memset(header->wsa5__To, '\0', 1024);
+		strncpy(header->wsa5__To, was_To, 1024);
+	}
+	soap->header = header;
+	return soap;
+}
+
+int ont_onvif_device_discovery()
+{
+	int HasDev = 0;
+	int retval = SOAP_OK;
+	wsdd__ProbeType req;
+	struct __wsdd__ProbeMatches resp;
+	wsdd__ScopesType sScope;
+	struct SOAP_ENV__Header header;
+	struct soap* soap;
+
+
+	const char *was_To = "urn:schemas-xmlsoap-org:ws:2005:04:discovery";
+	const char *was_Action = "http://schemas.xmlsoap.org/ws/2005/04/discovery/Probe";
+	const char *soap_endpoint = "soap.udp://239.255.255.250:3702";
+
+	soap = ont_onvif_initsoap(&header, NULL, NULL, 5);
+	soap->header = &header;
+	
+	soap_default_wsdd__ScopesType(soap, &sScope);
+	sScope.__item = "";
+	req.Scopes = &sScope;
+	req.Types = "dn:NetworkVideoTransmitter"; 
+
+	retval = soap_send___wsdd__Probe(soap, soap_endpoint, NULL, &req);
+
+	//tds:Device
+	while (retval == SOAP_OK)
+	{
+		retval = soap_recv___wsdd__ProbeMatches(soap, &resp);
+		if (retval == SOAP_OK)
+		{
+			if (soap->error)
+			{
+				printf("[%d]: recv soap error :%d, %s, %s\n", __LINE__, soap->error, *soap_faultcode(soap), *soap_faultstring(soap));
+				retval = soap->error;
+			}
+			else //成功接收某一个设备的消息
+			{
+				HasDev++;
+				if (resp.wsdd__ProbeMatches->ProbeMatch != NULL && resp.wsdd__ProbeMatches->ProbeMatch->XAddrs != NULL)
+				{
+					printf(" ################  recv  %d devices info #### \n", HasDev);
+					printf("Target Service Address  : %s\r\n", resp.wsdd__ProbeMatches->ProbeMatch->XAddrs);
+					printf("Target EP Address       : %s\r\n", resp.wsdd__ProbeMatches->ProbeMatch->wsa__EndpointReference.Address);
+					printf("Target Type             : %s\r\n", resp.wsdd__ProbeMatches->ProbeMatch->Types);
+					printf("Target Metadata Version : %d\r\n", resp.wsdd__ProbeMatches->ProbeMatch->MetadataVersion);
+					Sleep(1000);
+				}
+			}
+		}
+		else if (soap->error)
+		{
+			if (HasDev == 0)
+			{
+				printf("[%s][%s][Line:%d] Device discovery or soap error: %d, %s, %s \n", __FILE__, __FUNCTION__, __LINE__, soap->error, *soap_faultcode(soap), *soap_faultstring(soap));
+				retval = soap->error;
+			}
+			else
+			{
+				printf(" [%s]-[%d] Search end! It has Searched %d devices! \n", __FUNCTION__, __LINE__, HasDev);
+				retval = 0;
+			}
+			break;
+		}
+	}
+
+	soap_destroy(soap);
+	soap_end(soap);
+	soap_free(soap);
+
+	return retval;
+}
+
+int ont_onvifdevice_adddevice(const char *url, const char*user, const char *passwd)
+{
+	device_onvif_t *devicePtr = NULL;
+	int i = 0;
+	int result = 0;
+
+	if (_gOnvifDevice.list == NULL)
+	{
+		_gOnvifDevice.list = malloc(M_ONVIFDEVICE_NUMBERS * sizeof(device_onvif_t));
+		memset(_gOnvifDevice.list, 0x00, M_ONVIFDEVICE_NUMBERS * sizeof(device_onvif_t));
+		_gOnvifDevice.number = M_ONVIFDEVICE_NUMBERS;
+	}
+
+	while (i < _gOnvifDevice.number)
+	{
+		if (_gOnvifDevice.list[i].strUrl[0] == '\0')
+		{
+			devicePtr = &_gOnvifDevice.list[i];
+			break;
+		}
+		else
+		{
+			i++;
+		}
+	}
+
+	if (devicePtr == NULL)
+	{
+		char *temp = realloc(_gOnvifDevice.list, _gOnvifDevice.number * 2 * sizeof(device_onvif_t));
+		devicePtr = &_gOnvifDevice.list[_gOnvifDevice.number];
+		memset(&devicePtr, 0x00, _gOnvifDevice.number * sizeof(device_onvif_t));
+		_gOnvifDevice.number = _gOnvifDevice.number * 2;
+	}
+
+    memcpy(devicePtr->strUser, user, strlen(user));
+    memcpy(devicePtr->strPass, passwd, strlen(passwd));
+
+    result = ont_onvifdevice_capablity(url, devicePtr);
+    if (result < 0)
+    {
+        return -1;
+    }
+    memcpy(devicePtr->strUrl, url, strlen(url));
+    devicePtr->hasGetCap = 1;
+
+    result = ont_onvifdevice_getprofile(devicePtr);
+    if (result < 0)
+    {
+        return -1;
+    }
+    for (i = 0; i < 4; i++)
+    {
+        if (devicePtr->profiles[i].strprofile[0] != '\0')
+        {
+            result = ont_onvifdevice_getplayurl(devicePtr, i);
+            if (result < 0)
+            {
+                return -1;
+            }
+        }
+    }
+
+    if (result < 0)
+    {
+        return -1;
+    }
+    result = ont_onvifdevice_getconfigurations(devicePtr);
+    if (result < 0)
+    {
+        return -1;
+    }
+    return 0;
+
+}
+
+
+
+device_onvif_t* ont_getonvifdevice(int index)
+{
+    int i = index - 1;
+    if (_gOnvifDevice.number < index)
+    {
+        return NULL;
+    }
+
+    return &_gOnvifDevice.list[i];
+}
+
+
+char* ont_geturl_level(device_onvif_t *devicePtr, int level, RTMPMetadata *meta)
+{
+    int i = 0;
+    for (i = 0; i < ONVF_DEVICE_PROFILES; i++)
+    {
+        if (devicePtr->profiles[i].level == level)
+        {
+			meta->width = devicePtr->profiles[i].width;
+			meta->height = devicePtr->profiles[i].height;
+			meta->videoDataRate = devicePtr->profiles[i].bitrate;
+			meta->frameRate = devicePtr->profiles[i].framterate;
+
+            return devicePtr->profiles[i].strPlayurl;
+        }
+    }
+	return NULL;
+}
+
+static _ont_onvifdevice_stop(device_onvif_t *devicePtr)
+{
+    static struct soap *soap;
+    struct SOAP_ENV__Header header = { 0 };
+    enum xsd__boolean flag = 1;
+    struct _tptz__Stop stop;
+    struct _tptz__StopResponse tptz__StopResponse = { 0 };
+    int result = 0;
+    stop.PanTilt = &flag;
+    stop.Zoom = &flag;
+    stop.ProfileToken = devicePtr->profiles[0].strprofile;
+
+
+    soap = soap_new();
+    soap->recv_timeout = 10;
+    soap_set_namespaces(soap, namespaces);
+    soap_default_SOAP_ENV__Header(soap, &header);
+
+    soap_wsse_add_Security(soap);
+    soap_wsse_add_UsernameTokenDigest(soap, "Id", devicePtr->strUser, devicePtr->strPass);
+    do
+    {
+        result = soap_call___tptz__Stop(soap, devicePtr->strPTZ, NULL, &stop, &tptz__StopResponse);
+        if (result != SOAP_OK)
+        {
+            printf("%s:%d,soap error: %d, %s, %s\n", __FILE__, __LINE__, soap->error, *soap_faultcode(soap), *soap_faultstring(soap));
+            break;
+        }
+    } while (0); 
+    soap_wsse_delete_Security(soap);
+    soap_wsse_verify_done(soap);
+    soap_destroy(soap);
+    soap_end(soap);
+    soap_done(soap);
+    soap_free(soap);
+    return result;
+
+}
+/*
+1: 焦距变大(倍率变大)  
+2: 焦距变小(倍率变小) 
+3: 焦点前调
+4: 焦点后调 
+5: 光圈扩大 
+6: 光圈缩小 
+11: 方向向上
+12: 方向向下
+13: 方向左转
+14: 方向右转 
+22:自动扫描, 不支持
+*/
+int ont_onvifdevice_ptz(int index, int cmd, int _speed /* [1-7]*/, int status)
+{
+
+    static struct soap *soap;
+    device_onvif_t *devicePtr;
+    int i = 0;
+    int result = 0;
+    struct SOAP_ENV__Header header = { 0 };
+    struct tt__PTZSpeed ptzSpeed = { NULL };
+    struct tt__Vector2D PanTilt = { 0, };
+    struct tt__Vector1D Zoom = { 0, };
+    LONG64 timeout = 0;
+    double speed = _speed*1.0 / (7.0*3);
+
+    struct _tptz__ContinuousMove tptz__ContinuousMove;
+    struct _tptz__ContinuousMoveResponse tptz__ContinuousMoveResponse;
+
+    devicePtr = &_gOnvifDevice.list[index];
+    if (!devicePtr->hasCoutinusPanTilt)
+    {
+        return -1;
+    }
+	if (!devicePtr->hasPTZ)
+	{
+		return -1;
+	}
+
+    tptz__ContinuousMove.ProfileToken = devicePtr->profiles[0].strprofile;
+    tptz__ContinuousMove.Timeout = &timeout;
+    tptz__ContinuousMove.Velocity = &ptzSpeed;
+
+    if (status == 2) //step 
+    {
+        timeout = devicePtr->ptzTimeoutMin;
+    }
+    else if (status == 0)
+    {
+		timeout = -1;
+    }
+    else if (status == 1)
+    {
+        //stop
+        return _ont_onvifdevice_stop(devicePtr);
+    }
+    else
+    {
+        return -1;
+    }
+    //pantilt.
+    if (cmd == 11 || cmd == 12 || cmd == 13 || cmd == 14)
+    {
+        ptzSpeed.PanTilt = &PanTilt;
+        if (cmd == 11)
+        {
+            PanTilt.x = 0;
+            PanTilt.y = speed*devicePtr->ptYrangeMax;
+        }
+        else if (cmd == 12)
+        {
+            PanTilt.x = 0;
+            PanTilt.y = speed*devicePtr->ptYrangeMin;
+        }
+        else if (cmd == 13)
+        {
+            PanTilt.y = 0;
+            PanTilt.x = speed*devicePtr->ptXrangeMin;
+        }
+        else if (cmd == 14)
+        {
+            PanTilt.y = 0;
+            PanTilt.x = speed*devicePtr->ptXrangeMax;
+        }
+    }
+    //zoom
+    else if (cmd == 1 || cmd == 2)
+    {
+        ptzSpeed.Zoom = &Zoom;
+        if (cmd == 1)
+        {
+            Zoom.x = speed*devicePtr->zoomRangeMax;
+        }
+        else
+        {
+            Zoom.x = speed*devicePtr->zoomRangeMin;
+        }
+    }
+
+
+    soap = soap_new();
+    soap->recv_timeout = 10;
+    soap_set_namespaces(soap, namespaces);
+    soap_default_SOAP_ENV__Header(soap, &header);
+
+    soap_wsse_add_Security(soap);
+    soap_wsse_add_UsernameTokenDigest(soap, "Id", devicePtr->strUser, devicePtr->strPass);
+
+    do
+    {
+        result = soap_call___tptz__ContinuousMove(soap, devicePtr->strPTZ, NULL, &tptz__ContinuousMove, &tptz__ContinuousMoveResponse);
+        if (result != SOAP_OK)
+        {
+            printf("%s:%d,soap error: %d, %s, %s\n", __FILE__, __LINE__, soap->error, *soap_faultcode(soap), *soap_faultstring(soap));
+            break;
+        }
+    } while (0);
+
+    soap_wsse_delete_Security(soap);
+    soap_wsse_verify_done(soap);
+    soap_destroy(soap);
+    soap_end(soap);
+    soap_done(soap);
+    soap_free(soap);
+    return 0;
+}
