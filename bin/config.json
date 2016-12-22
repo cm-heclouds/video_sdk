@@ -1,0 +1,45 @@
+{
+	"profile":{
+	   "accsvr":"183.230.40.39",
+	   "accport":6002,
+	   "deviceid":3264679,
+	   "productid":71273,
+	   "pass":"vedio2"
+	},
+	
+    "onvif": [
+        {
+            "url": "http://192.168.217.75:80/onvif/device_service",
+            "user": "admin",
+            "passwd": "test123456"
+        },
+        {
+            "url": "http://192.168.217.133:80/onvif/device_service",
+            "user": "admin",
+            "passwd": "test123456"
+        }
+    ],
+	
+	"rvod":
+	[
+		{
+		   "channel_id":1,
+		   "location":"e:\\test.mp4",
+		   "isupload":1,
+		   "dst":"video",
+		   "beginTime":"2016-12-06 16:30:30",
+		   "endTime":"2016-12-06 15:30:30",
+		   "videoDesc":"test_001"
+		},
+		
+		{
+		   "channel_id":1,
+		   "location":"e:\\test.mp4",
+		   "isupload":1,
+		   "dst":"video",
+		   "beginTime":"2016-12-07 12:30:30",
+		   "endTime":"2016-12-07 13:30:30",
+		   "videoDesc":"test_002"
+		}
+	]
+}
