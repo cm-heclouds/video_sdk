@@ -1,0 +1,106 @@
+#ifndef ONT_INCLUDE_ONT_CONFIG_H_
+#define ONT_INCLUDE_ONT_CONFIG_H_
+
+/**
+ * @def ONT_SOCK_SEND_BUF_SIZE
+ *
+ * socket通信时，发送缓冲区的最大字节数
+ */
+#cmakedefine ONT_SOCK_SEND_BUF_SIZE    ${ONT_SOCK_SEND_BUF_SIZE}
+
+/**
+ * @def ONT_SOCK_RECV_BUF_SIZE
+ *
+ * socket通信时， 接收缓冲区的最大字节数
+ */
+#cmakedefine ONT_SOCK_RECV_BUF_SIZE    ${ONT_SOCK_RECV_BUF_SIZE}
+
+/**
+ * @def ONT_SSERVER_ADDRESS
+ *
+ * 服务器地址
+ */
+#cmakedefine ONT_SERVER_ADDRESS        "${ONT_SERVER_ADDRESS}"
+
+/**
+ * @def ONT_SERVER_ADDRESS
+ *
+ * 服务器端口
+ */
+#cmakedefine ONT_SERVER_PORT           ${ONT_SERVER_PORT}
+
+/**
+ * @def ONT_PROTOCOL_EDP
+ *
+ * SDK支持EDP协议
+ * 注释后，SDK不再支持EDP协议，EDP协议相关代码不参与编译
+ */
+#cmakedefine ONT_PROTOCOL_EDP
+
+/**
+ * @def ONT_PROTOCOL_MQTT
+ *
+ * SDK支持MQTT协议
+ * 注释后，SDK不再支持MQTT协议，MQTT协议相关代码不参与编译
+ */
+#cmakedefine ONT_PROTOCOL_MQTT
+
+/**
+ * @def ONT_PROTOCOL_MODBUS
+ *
+ * SDK支持MODBUS协议
+ * 注释后，SDK不再支持MODBUS协议，MODBUS协议相关代码不参与编译
+ */
+ #cmakedefine ONT_PROTOCOL_MODBUS
+
+/**
+ * @def ONT_PROTOCOL_JTEXT
+ *
+ * SDK支持JTEXT协议
+ * 注释后，SDK不再支持JTEXT协议，JTEXT协议相关代码不参与编译
+ */
+#cmakedefine ONT_PROTOCOL_JTEXT
+
+
+
+/**
+ * @def ONT_PROTOCOL_VIDEO
+ *
+ * SDK支持VIDEO协议
+ *
+ */
+#cmakedefine ONT_PROTOCOL_VIDEO
+
+/**
+ * @def ONT_PLATFORM_PERSISTENCE_SUPPORT
+ *
+ * 平台支持持久化存储
+ * 注释掉后将关闭持久化相关的代码
+ */
+#cmakedefine ONT_PLATFORM_PERSISTENCE_SUPPORT
+
+/**
+ * @def ONT_PLATFORM_FLOATING_POINT_SUPPORT
+ *
+ * 平台支持浮点数
+ * 注释掉后将关闭浮点相关的代码
+ */
+#cmakedefine ONT_PLATFORM_FLOATING_POINT_SUPPORT
+
+/**
+ * @def ONT_SECURITY_SUPPORT
+ *
+ * 平台支持加密
+ * 打开后需要移植加密相关的接口
+ */
+#cmakedefine ONT_SECURITY_SUPPORT
+
+/**
+ * \def ONT_DEBUG
+ *
+ * 调试模式标记
+ * 打开后，会增加调试相关的代码
+ */
+#cmakedefine ONT_DEBUG
+
+#endif /* ONT_INCLUDE_ONT_CONFIG_H_ */
