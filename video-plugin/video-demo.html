@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>RTMP视频DEMO</title>
+    <style>
+        body{
+            margin: 0;
+            padding: 0;
+        }
+        .header{
+            height: 80px;
+            line-height: 80px;
+            text-align: center;
+            background-color: #0e0e0e;
+            color: #fff;
+            font-size: 26px;
+        }
+        .container{
+            width: 100%;
+        }
+        .video{
+            width: 640px;
+            height: 480px;
+            margin: 20px auto;
+        }
+        .video-url{
+            width: 640px;
+            margin: 0 auto;
+        }
+        .video-url input{
+            display: inline-block;
+            width: 580px;
+        }
+        .video-url button{
+            margin-left: 13px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">RTMP视频DEMO</div>
+    <div class="container">
+        <div class="video">
+            <video id="video" class="video-js vjs-default-skin" controls="false" preload="none" width="640" height="480" data-setup="{}">
+                <!--<source src="RTMP://172.19.3.1:1935/rvod/213455-1-20161206163030-20161206153030?s6fjJuJo7KshpNd1HTpAMM7TvwxSYVAMlRzI9maIe87lZOFPFi7UWlg-AL8tkb_0" type="rtmp/flv"/>-->
+                <source src="" type="rtmp/flv"/>
+            </video>
+        </div>
+        <div class="video-url">
+            <input type="text" name="url" placeholder="请输入视频url"><button class="url-btn">确定</button>
+        </div>
+    </div>
+    <script src="js/jquery-3.1.1.js"></script>
+    <script src="js/video.min.js"></script>
+    <script src="js/video-demo.js"></script>
+    <script>
+        videojs.options.flash.swf = "js/video-js.swf";
+    </script>
+</body>
+</html>
