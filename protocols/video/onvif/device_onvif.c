@@ -446,7 +446,7 @@ int ont_onvif_device_discovery()
 					printf("Target EP Address       : %s\r\n", resp.wsdd__ProbeMatches->ProbeMatch->wsa__EndpointReference.Address);
 					printf("Target Type             : %s\r\n", resp.wsdd__ProbeMatches->ProbeMatch->Types);
 					printf("Target Metadata Version : %d\r\n", resp.wsdd__ProbeMatches->ProbeMatch->MetadataVersion);
-					Sleep(1000);
+					ont_platform_sleep(1000);
 				}
 			}
 		}

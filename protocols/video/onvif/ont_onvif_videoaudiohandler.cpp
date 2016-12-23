@@ -254,6 +254,10 @@ int ONTVideoAudioSink::handleVideoFrame(unsigned frameSize, unsigned numTruncate
 int ONTVideoAudioSink::handleAACFrame(unsigned frameSize, unsigned numTruncatedBytes, unsigned int deltaTs)
 {
 	ont_onvif_playctx *rtmp = (ont_onvif_playctx*)this->envir().livertmp;
+	if (!sendmeta)
+	{
+		return 0 ;
+	}
     if (sendaudioheader == 0)
     {
         sendaudioheader = 1;

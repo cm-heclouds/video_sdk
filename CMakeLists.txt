@@ -23,6 +23,7 @@ option(_MQTT "mqtt protocol" 1)
 option(_VIDEO "rtmp video protocol" 1)
 option(_MP4V2 "mp4 open source" 1)
 option(_ONVIF "onvif protocol" 1)
+option(_TEST "test" 0)
 option(_SAMPLE "sample" 1)
 
 
@@ -129,6 +130,11 @@ add_subdirectory(platforms)
 
 # protocols
 add_subdirectory(protocols)
+
+# tests
+if(_TEST)
+add_subdirectory(test)
+endif(_TEST)
 
 # samples
 if(_SAMPLE)

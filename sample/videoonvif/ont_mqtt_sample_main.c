@@ -23,9 +23,6 @@
 #pragma comment(lib, "Dbghelp.lib")
 #endif
 
-#define SAMPLE_VIDEOMQTT_ADDR "172.19.3.1"
-#define SAMPLE_VIDEOMQTT_PORT 10019
-
 static void sample_log(void *ctx, ont_log_level_t ll , const char *format, ...)
 {
     static const char *level[] = {
@@ -101,6 +98,7 @@ void sync_channel_rvod(ont_device_t *dev)
 
 }
 
+#ifdef WIN32
 void CreateDumpFile(LPCWSTR lpstrDumpFilePathName, EXCEPTION_POINTERS *pException)
 {
 
@@ -140,16 +138,18 @@ LONG ApplicationCrashHandler(EXCEPTION_POINTERS *pException)
 
 	return EXCEPTION_EXECUTE_HANDLER;
 }
+#endif
 
 struct testDump
 {
 	int a;
 	int b;
 };
-
 int main( int argc, char *argv[] )
 {
+#ifdef WIN32
 	SetUnhandledExceptionFilter((LPTOP_LEVEL_EXCEPTION_FILTER)ApplicationCrashHandler);
+#endif
 
 	//ont_onvif_device_discovery();
     ont_device_t *dev=NULL;
