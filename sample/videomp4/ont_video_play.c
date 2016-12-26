@@ -69,7 +69,7 @@ void ont_video_vod_stream_start(void *dev, int channel, t_ont_video_file *filein
     t_rtmp_vod_ctx *ctx = rtmp_rvod_createctx();
 	do 
 	{
-		if (rtmp_rvod_parsefile(ctx, "e:\\test.mp4") < 0)
+		if (rtmp_rvod_parsefile(ctx, "e:\\test2.mp4") < 0)
 		{
 			break;
 		}

@@ -40,7 +40,7 @@ int  cfg_initilize(const char * cfgpath)
 	fseek(hfile, 0, SEEK_END);
 	filesize = ftell(hfile);
 	fseek(hfile, 0, SEEK_SET);
-	char *dstaddr = ont_platform_malloc(filesize);
+	char *dstaddr = ont_platform_malloc(filesize+1);
 	while (!feof(hfile))
 	{
 		fread(dstaddr + i, 1, 1, hfile);
@@ -55,6 +55,12 @@ int  cfg_initilize(const char * cfgpath)
 	* Get device profile
 	*/
 	item = cJSON_GetObjectItem(json, "profile");
+	if (!item)
+	{
+	    printf("config file error\n");
+		getchar();
+		exit(0);
+	}
 	ont_platform_snprintf(onvif_cfg.profile.svraddr, sizeof(onvif_cfg.profile.svraddr), cJSON_GetObjectItem(item, "accsvr")->valuestring);
 	ont_platform_snprintf(onvif_cfg.profile.key, sizeof(onvif_cfg.profile.key), cJSON_GetObjectItem(item, "pass")->valuestring);
 	onvif_cfg.profile.svrport = cJSON_GetObjectItem(item, "accport")->valueint;
@@ -144,7 +150,8 @@ struct _onvif_channel * cfg_get_channels()
 
 struct _onvif_channel * cfg_get_channel(int channelid)
 {
-	for (int i = 0; i < onvif_cfg.channelnum;i++)
+    int i =0;
+	for (; i < onvif_cfg.channelnum;i++)
 	{
 		if (onvif_cfg.channels[i].channelid == channelid)
 		{
@@ -166,7 +173,8 @@ struct _onvif_rvod * cfg_get_rvods()
 
 struct _onvif_rvod * cfg_get_rvod(int channelid, char * begin, char* end)
 {
-	for (int i = 0; i < onvif_cfg.rovdnum; i++)
+    int i = 0;
+	for (; i < onvif_cfg.rovdnum; i++)
 	{
 		if (onvif_cfg.rovds[i].channelid == channelid
 			&& strcmp(begin, onvif_cfg.rovds[i].beginTime) == 0

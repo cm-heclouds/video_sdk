@@ -2214,7 +2214,7 @@ HandleInvoke(RTMP *r, const char *body, unsigned int nBodySize)
             if (strstr(host, "tv-stream.to") || strstr(pageUrl, "tv-stream.to"))
             {
                 AVal av_requestAccess = AVC("requestAccess");
-                AVal av_auth = AVC("h§4jhH43d");
+                AVal av_auth = AVC("0000000000");
                 enc = pbuf;
                 enc = AMF_EncodeString(enc, pend, &av_requestAccess);
                 enc = AMF_EncodeNumber(enc, pend, 0);
@@ -2601,7 +2601,8 @@ HandleInvoke(RTMP *r, const char *body, unsigned int nBodySize)
         {
             (r->seek_notify)(r->rvodCtx, ts);
         }
-        for (int i = 0; i < RTMP_CHANNELS; i++)
+        int i = 0;
+        for (; i < RTMP_CHANNELS; i++)
         {
             /*clear the previous packet.*/
             char *prevPacket = (char *)r->m_vecChannelsOut[i];

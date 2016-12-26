@@ -8,6 +8,7 @@ set(ONT_SOCK_SEND_BUF_SIZE 4096)
 set(ONT_SOCK_RECV_BUF_SIZE 1024)
 set(ONT_SERVER_ADDRESS "api.heclouds.com")
 set(ONT_SERVER_PORT 80)
+set(_STATIC 1)
 
 if(WIN32)
 set(_STATIC 1)

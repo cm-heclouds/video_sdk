@@ -61,7 +61,7 @@
 #endif
 
 #ifndef __BYTE_ORDER
-#error  "Byte order not defined on your system, assuming little endian?"
+#warning  "Byte order not defined on your system, assuming little endian?"
 #define __BYTE_ORDER	__LITTLE_ENDIAN
 #endif
 

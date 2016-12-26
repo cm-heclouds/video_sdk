@@ -382,8 +382,9 @@ static struct soap* ont_onvif_initsoap(struct SOAP_ENV__Header *header, const ch
 
 	header->wsa5__MessageID = (char *)malloc(100);
 	memset(header->wsa5__MessageID, 0, 100);
-	strncpy(header->wsa5__MessageID, "uuid:9543d68b-1dd2-11b2-a105-010203040506", strlen("uuid:9543d68b-1dd2-11b2-a105-010203040506"));
+	strncpy(header->wsa5__MessageID, _HwId, strlen(_HwId));
 
+	printf("messageid:%s\n", header->wsa5__MessageID);
 	if (was_Action != NULL)
 	{
 		header->wsa5__Action = (char *)malloc(1024);
@@ -415,7 +416,7 @@ int ont_onvif_device_discovery()
 	const char *was_Action = "http://schemas.xmlsoap.org/ws/2005/04/discovery/Probe";
 	const char *soap_endpoint = "soap.udp://239.255.255.250:3702";
 
-	soap = ont_onvif_initsoap(&header, NULL, NULL, 5);
+	soap = ont_onvif_initsoap(&header, was_To, was_Action, 5);
 	soap->header = &header;
 	
 	soap_default_wsdd__ScopesType(soap, &sScope);
@@ -423,7 +424,7 @@ int ont_onvif_device_discovery()
 	req.Scopes = &sScope;
 	req.Types = "dn:NetworkVideoTransmitter"; 
 
-	retval = soap_send___wsdd__Probe(soap, soap_endpoint, NULL, &req);
+	retval = soap_send___wsdd__Probe(soap, soap_endpoint, "http://schemas.xmlsoap.org/ws/2005/04/discovery/Probe", &req);
 
 	//tds:Device
 	while (retval == SOAP_OK)
