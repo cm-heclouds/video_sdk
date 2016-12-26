@@ -46,4 +46,5 @@ sdk
 可能的问题有：
 *该芯片的某些操作有内存对齐要求，检查使用的数据结构是否按要求进行内存对齐
 3. VIDEO smaple 支持的文件格式是什么？
-SAMPLE 支持MP4格式的远程回放，示例文件的下载地址 http://pan.baidu.com/s/1kVLkxYf
+SAMPLE 支持MP4格式的远程回放，MP4示例文件的下载地址 http://pan.baidu.com/s/1kVLkxYf 
+
