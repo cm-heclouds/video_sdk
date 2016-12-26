@@ -12,8 +12,8 @@ set(_STATIC 1)
 
 if(WIN32)
 set(_STATIC 1)
-else(WIN32)
-option(_STATIC "static library" 0)
+elseif(UNIX OR CYGWIN)
+option(_STATIC "static library" 1)
 endif(WIN32)
 
 option(_BASE "sdk base" 1)
