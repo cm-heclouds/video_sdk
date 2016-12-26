@@ -6,11 +6,12 @@
  
 ## 编译SDK
 ### 通过CMAKE编译SDK
-用cmake生成调试版本的工程，使用命令：cmake -DCMAKE_BUILD_TYPE=Debug
-用cmake生成发布版本的工程，使用命令：cmake -DCMAKE_BUILD_TYPE=Release
-例如，编译edp相关内容：cmake -DCMAKE_BUILD_TYPE=Debug -D_BASE=1 -D_EDP=1 -D_SAMPLE=1
-      编译mqtt相关内容：cmake -DCMAKE_BUILD_TYPE=Debug -D_MQTT=1 -D_SAMPLE=1 
-      编译video相关的内容: cmake -DCMAKE_BUILD_TYPE=Debug -D_BASE=1 -D_MQTT=1 -D_VIDEO=1 -D_MP4V2=1 -D_ONVIF=1 -D_SAMPLE=1 -D_STATIC=1 #包含VIDEO的项目使用STATIC模式编译
+1. 用cmake生成调试版本的工程，使用命令：cmake -DCMAKE_BUILD_TYPE=Debug
+2. 用cmake生成发布版本的工程，使用命令：cmake -DCMAKE_BUILD_TYPE=Release
+3. 例如
+    * 编译edp相关内容：cmake -DCMAKE_BUILD_TYPE=Debug -D_BASE=1 -D_EDP=1 -D_SAMPLE=1
+    * 编译mqtt相关内容：cmake -DCMAKE_BUILD_TYPE=Debug -D_MQTT=1 -D_SAMPLE=1 
+    * 编译video相关的内容，Video依赖公有协议MQTT，EDP等完成部分控制命令交互， cmake -DCMAKE_BUILD_TYPE=Debug -D_BASE=1 -D_MQTT=1 -D_VIDEO=1 -D_MP4V2=1 -D_ONVIF=1 -D_SAMPLE=1 -D_STATIC=1 #包含VIDEO的项目使用STATIC模式编译
 ### 自定义工程中编译SDK
 1. 将SDK源码包含到自定义工程中
 2. 设置SDK所需的头文件的路径：
@@ -35,7 +36,7 @@ sdk
     + edp            EDP协议的示例
     + mqtt           MQTT协议的示例
  + src               SDK内部实现
-   ...
+
 
 ## 常见问题 Q&A
 1. 如何设置SDK内存使用量？
