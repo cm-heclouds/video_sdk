@@ -40,7 +40,7 @@ int  cfg_initilize(const char * cfgpath)
 	fseek(hfile, 0, SEEK_END);
 	filesize = ftell(hfile);
 	fseek(hfile, 0, SEEK_SET);
-	char *dstaddr = ont_platform_malloc(filesize+1);
+	char *dstaddr = ont_platform_malloc(filesize+4);
 	while (!feof(hfile))
 	{
 		fread(dstaddr + i, 1, 1, hfile);
