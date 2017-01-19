@@ -51,9 +51,7 @@ int  status_synced(uint32_t nchn)
 int  file_synced(file_record *filerecord)
 {
 	file_record record;
-	uint32_t chnnum;
 	size_t rsize;
-	long fsize = 0;
 	int i = 0;
 	FILE *hfile = fopen(CHANNELINFO_SYNC_FILE, "r+");
 	if (hfile)

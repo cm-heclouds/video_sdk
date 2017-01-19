@@ -82,6 +82,10 @@ void ont_video_live_stream_start(void *dev, int channel, const char *push_url, c
 			level--;
 		}
 	} while (level>0);
+    if(level<=0)
+    {
+	    ONT_LOG1(ONTLL_ERROR, "live channel start err, %d", channel);
+    }
 }
 
 
@@ -251,7 +255,7 @@ static int _checkneedclose(void *dev)
 		}
 		else
 		{
-            ONT_LOG0(ONTLL_INFO, "live end");
+            ONT_LOG1(ONTLL_INFO, "live end, channel %d", finddata->channel);
 			ont_onvifdevice_live_stream_stop(finddata->playctx);
 		}
 		finddata->playctx = NULL;

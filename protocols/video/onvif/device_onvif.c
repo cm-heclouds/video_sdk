@@ -502,7 +502,7 @@ int ont_onvifdevice_adddevice(const char *url, const char*user, const char *pass
 
 	if (devicePtr == NULL)
 	{
-		char *temp = realloc(_gOnvifDevice.list, _gOnvifDevice.number * 2 * sizeof(device_onvif_t));
+		_gOnvifDevice.list = realloc(_gOnvifDevice.list, _gOnvifDevice.number * 2 * sizeof(device_onvif_t));
 		devicePtr = &_gOnvifDevice.list[_gOnvifDevice.number];
 		memset(&devicePtr, 0x00, _gOnvifDevice.number * sizeof(device_onvif_t));
 		_gOnvifDevice.number = _gOnvifDevice.number * 2;
@@ -566,6 +566,11 @@ device_onvif_t* ont_getonvifdevice(int index)
 char* ont_geturl_level(device_onvif_t *devicePtr, int level, RTMPMetadata *meta)
 {
     int i = 0;
+	if (!devicePtr)
+	{
+		return NULL;
+	}
+
     for (i = 0; i < ONVF_DEVICE_PROFILES; i++)
     {
         if (devicePtr->profiles[i].level == level)
@@ -635,20 +640,25 @@ static _ont_onvifdevice_stop(device_onvif_t *devicePtr)
 int ont_onvifdevice_ptz(int index, int cmd, int _speed /* [1-7]*/, int status)
 {
 
-    static struct soap *soap;
-    device_onvif_t *devicePtr;
-    int i = 0;
-    int result = 0;
-    struct SOAP_ENV__Header header = { 0 };
-    struct tt__PTZSpeed ptzSpeed = { NULL };
-    struct tt__Vector2D PanTilt = { 0, };
-    struct tt__Vector1D Zoom = { 0, };
-    LONG64 timeout = 0;
-    double speed = _speed*1.0 / (7.0*3);
+	static struct soap *soap;
+	device_onvif_t *devicePtr;
+	int i = 0;
+	int result = 0;
+	struct SOAP_ENV__Header header = { 0 };
+	struct tt__PTZSpeed ptzSpeed = { NULL };
+	struct tt__Vector2D PanTilt = { 0, };
+	struct tt__Vector1D Zoom = { 0, };
+	LONG64 timeout = 0;
+	double speed = _speed*1.0 / (7.0 * 3);
 
-    struct _tptz__ContinuousMove tptz__ContinuousMove;
-    struct _tptz__ContinuousMoveResponse tptz__ContinuousMoveResponse;
+	struct _tptz__ContinuousMove tptz__ContinuousMove;
+	struct _tptz__ContinuousMoveResponse tptz__ContinuousMoveResponse;
 
+	if (index >= _gOnvifDevice.number)
+	{
+		printf("%s:%d, index out of range \n", __FILE__, __LINE__);
+		return -1;
+	}
     devicePtr = &_gOnvifDevice.list[index];
     if (!devicePtr->hasCoutinusPanTilt)
     {

@@ -322,8 +322,11 @@ int rtmp_send_videodata(void* r, unsigned char *data, unsigned int size, unsigne
     }
     
     RTMPPacket_Reset(&packet);
-    RTMPPacket_Alloc(&packet, size);
-    
+	if (!RTMPPacket_Alloc(&packet, size+8)) /*reserve some data*/
+	{
+		RTMP_LogPrintf("alloc packet err, body size %d\n", size);
+		return 0;
+	}
     packet.m_packetType = RTMP_PACKET_TYPE_VIDEO;
     packet.m_nChannel = 0x04;
     packet.m_headerType = RTMP_PACKET_SIZE_MEDIUM;

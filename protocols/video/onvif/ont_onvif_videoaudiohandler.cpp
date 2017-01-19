@@ -59,7 +59,7 @@ ONTVideoAudioSink::ONTVideoAudioSink(UsageEnvironment& env, MediaSubsession& sub
         meta.videoCodecid = 7;
 
         sourcecodec = ONVIF_CODEC_H264;
-        fReceiveBuffer = new u_int8_t[VIDEO_SINK_RECEIVE_BUFFER_SIZE];
+		fReceiveBuffer = new u_int8_t[VIDEO_SINK_RECEIVE_BUFFER_SIZE + 16]; //reserve 16 bytes 
         buffersize = VIDEO_SINK_RECEIVE_BUFFER_SIZE;
     }
     else if (!strcmp(subsession.mediumName(), "audio"))
@@ -83,7 +83,7 @@ ONTVideoAudioSink::ONTVideoAudioSink(UsageEnvironment& env, MediaSubsession& sub
             meta.audioSampleRate = 44100;
             audioTag = rtmp_make_audio_headerTag(meta.audioCodecid, 3, 1, 1);
         }
-        fReceiveBuffer = new u_int8_t[AUDIO_SINK_RECEIVE_BUFFER_SIZE];
+        fReceiveBuffer = new u_int8_t[AUDIO_SINK_RECEIVE_BUFFER_SIZE+16]; //reserve 16 bytes 
         buffersize = AUDIO_SINK_RECEIVE_BUFFER_SIZE;
 
     }
@@ -112,7 +112,7 @@ ONTVideoAudioSink::~ONTVideoAudioSink() {
     }
 }
 
-uint32_t  next4Byptes(const unsigned char * data, unsigned size)
+uint32_t  next4Bytes(const unsigned char * data, unsigned size)
 {
     if (size < 4)
     {
@@ -126,15 +126,17 @@ int ONTVideoAudioSink::h264parse(const unsigned char *buf, unsigned size, unsign
 {
     uint32_t bytes4 = 0;
     unsigned parseSize = 0;
-    bytes4 = next4Byptes(&buf[offset], size - parseSize-offset);
+
+	/*skip the first 4 or 3 bytes*/
+    bytes4 = next4Bytes(&buf[offset], size - parseSize-offset);
     if (bytes4 == 0x00000001){
         offset += 4;
     }
     else if ((bytes4 & 0xFFFFFF00) == 0x00000100){
         offset += 3;
     }
-    /*skip the first 4 or 3 bytes*/
-    bytes4 = next4Byptes(&buf[offset], size - parseSize - offset);
+
+    bytes4 = next4Bytes(&buf[offset], size - parseSize - offset);
 
     while (bytes4 != 0x00000001 && (bytes4 & 0xFFFFFF00) != 0x00000100) {
         parseSize++;
@@ -142,7 +144,7 @@ int ONTVideoAudioSink::h264parse(const unsigned char *buf, unsigned size, unsign
         {
             break;
         }
-        bytes4 = next4Byptes(&buf[offset + parseSize], size - parseSize - offset);
+        bytes4 = next4Bytes(&buf[offset + parseSize], size - parseSize - offset);
     }
 
     return parseSize;
@@ -200,12 +202,27 @@ int ONTVideoAudioSink::handleVideoFrame(unsigned frameSize, unsigned numTruncate
         parseSize = this->h264parse(buf, frameSize, offset);
         /*check the buffer */
         if ((buf[offset] & 0x0f) == 0x07){ /*sps*/
-            memcpy(this->latestSps, &buf[offset], parseSize);
-            this->sps_len = parseSize;
+			if (parseSize <= sizeof(latestSps))
+			{  
+				memcpy(this->latestSps, &buf[offset], parseSize);
+				this->sps_len = parseSize;
+			}
+			else
+			{
+				/*not use the sps*/
+			}
+
         }
         else if ((buf[offset] & 0x0f) == 0x08) /*pps*/{
-            memcpy(this->latestPps, &buf[offset], parseSize);
-            this->pps_len = parseSize;
+			if (parseSize < sizeof(latestPps))
+			{
+				memcpy(this->latestPps, &buf[offset], parseSize);
+				this->pps_len = parseSize;
+			}
+			else
+			{
+				/*not use the pps*/
+			}
         }
         else if ((buf[offset] & 0x0f) == 0x05) /*I frame*/{
             if (sendmeta == 0)
