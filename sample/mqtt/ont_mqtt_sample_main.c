@@ -2,6 +2,8 @@
 #include <sys/time.h>
 #include <netdb.h>
 #include <arpa/inet.h>
+#else
+#include "winsock2.h"
 #endif
 
 //#include <unistd.h>
@@ -10,7 +12,6 @@
 #include <stdarg.h>
 #include <time.h>
 #include <string.h>
-
 #include "ont/mqtt.h"
 #include "ont/log.h"
 

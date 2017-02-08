@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 2.8)
 
-project(ont_sdk C)
+project(protocols C)
 
 set(ONT_SDK_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/..)
 set(LIBRARY_OUTPUT_PATH ${ONT_SDK_ROOT}/lib)

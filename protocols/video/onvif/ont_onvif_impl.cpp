@@ -173,6 +173,7 @@ void setupNextSubsession(RTSPClient* rtspClient) {
 
             // Continue setting up this subsession, by sending a RTSP "SETUP" command:
             rtspClient->sendSetupCommand(*scs.subsession, continueAfterSETUP, False, REQUEST_STREAMING_OVER_TCP);
+			//rtspClient->sendSetupCommand(*scs.subsession, continueAfterSETUP, False, FALSE);
         }
         return;
     }
@@ -543,7 +544,7 @@ int ont_onvifdevice_live_stream_singlestep(void *ctx)
 	ont_onvif_playctx *r = (ont_onvif_playctx*)env->livertmp;
 	if (rtmp_check_rcv_handler(r->rtmp_client) < 0)
 	{
-		return - 1;
+		return -1;
 	}
     env->taskScheduler().SingleStep();
 	if (r->eventLoopWatchVariable != 0)
@@ -574,3 +575,23 @@ void ont_onvifdevice_live_stream_stop(void *ctx)
     delete scheduler;
     delete env;
 }
+
+
+
+
+extern "C" void* _test_live_stream_start(int channel, const char *push_url, const char*deviceid, int level)
+{
+	const char*c_url = NULL;
+	// Begin by setting up our usage environment:
+	TaskScheduler* scheduler = BasicTaskScheduler::createNew();
+	BasicUsageEnvironment* env = BasicUsageEnvironment::createNew(*scheduler);
+	env->livertmp = NULL;
+	c_url = "rtsp://admin:test123456@192.168.217.133:554/Streaming/Channels/101?transportmode=unicast&profile=Profile_1 RTSP/1.0";
+	void *rtspClient = openURL(*env, NULL, c_url); //need free the rtspclient resource
+	while (1)
+	{
+		env->taskScheduler().SingleStep();
+	}
+}
+	
+

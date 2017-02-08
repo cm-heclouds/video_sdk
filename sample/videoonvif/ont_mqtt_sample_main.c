@@ -66,10 +66,6 @@ int ont_add_onvif_devices()
 	return j;
 }
 
-void sync_chnanle_num()
-{
-
-}
 void sync_channel_rvod(ont_device_t *dev)
 {
 	int i;
@@ -145,6 +141,8 @@ struct testDump
 	int a;
 	int b;
 };
+
+
 int main( int argc, char *argv[] )
 {
 #ifdef WIN32
@@ -158,8 +156,13 @@ int main( int argc, char *argv[] )
 
 	ont_device_cmd_t *cmd = NULL;
 	int chnnum = 0;
-	cfg_initilize("config.json");
+    
+	//_test_live_stream_start();
+	cfg_initilize("E:\\share\\video_sdk\\bin\\Debug\\config.json");
+	//cfg_initilize("config.json");
 	int product_id = cfg_get_profile()->productid;
+
+
 
 #ifdef ONT_OS_POSIX
 	struct sigaction sa;

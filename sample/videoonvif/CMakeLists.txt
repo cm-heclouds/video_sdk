@@ -38,9 +38,19 @@ if(UNIX OR CYGWIN)
     list(APPEND LIBS m)
     #used cpp
     list(APPEND LIBS stdc++)
-    list(APPEND LIBS ssl) 
-    list(APPEND LIBS crypto)     
+    if(ARM-LINUX)
+        list(APPEND LIBS libssl.a) 
+        list(APPEND LIBS libcrypto.a)    
+    else(ARM-LINUX)
+        list(APPEND LIBS ssl) 
+        list(APPEND LIBS crypto)      
+    endif(ARM-LINUX)
+    
+    list(APPEND LIBS dl)
+    list(APPEND LIBS pthread)
 endif(UNIX OR CYGWIN)
+
+
 
 
 target_link_libraries(sample_${VIDEO}_onvif ${MQTT} ${VIDEO} ${ONVIF} ${LIVERTSP} ${LIBS})

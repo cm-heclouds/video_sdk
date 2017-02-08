@@ -200,6 +200,10 @@ void ont_video_dev_ptz_ctrl(void *dev, int channel, int mode, t_ont_video_ptz_cm
 static int delta = 0;
 void singlestep(void *data, void *context)
 {
+	if (!data)
+	{
+		return;
+	}
 	t_playlist *play = data;
 	int localDelta = 0;
 	if (play->rvod == 1)

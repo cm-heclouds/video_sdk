@@ -1,7 +1,6 @@
 cmake_minimum_required(VERSION 2.8)
 
-project(ont_sdk C)
-
+project(video C)
 # base
 add_subdirectory(ont)
 

@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 2.8)
 
+PROJECT(platform C)
+
 if(MSVC)
     file(GLOB_RECURSE INC_TEMP FOLLOW_SYMLINKS ${CMAKE_CURRENT_SOURCE_DIR}/*.h)
     list(APPEND INC_LIST ${INC_TEMP})

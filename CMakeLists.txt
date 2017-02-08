@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 2.8)
 
-project(ont_all C)
+project(ont_all )
 
 set(CMAKE_DEBUG_POSTFIX "d")
 
@@ -26,7 +26,6 @@ option(_MP4V2 "mp4 open source" 1)
 option(_ONVIF "onvif protocol" 1)
 option(_TEST "test" 0)
 option(_SAMPLE "sample" 1)
-
 
 if(WIN32)
     add_definitions(-DONT_OS_WIN)

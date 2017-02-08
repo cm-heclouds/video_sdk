@@ -14,7 +14,10 @@ ONTVideoAudioSink* ONTVideoAudioSink::createNew(UsageEnvironment& env,
     // identifies the kind of data that's being received
     char const* streamId) // identifies the stream itself (optional)
 {
-
+	if (strcmp(subsession.mediumName(), "audio") && strcmp(subsession.mediumName(), "video"))
+	{
+		return NULL;
+	}
     return new ONTVideoAudioSink(env, subsession, streamId);
 }
 
@@ -28,36 +31,49 @@ ONTVideoAudioSink::ONTVideoAudioSink(UsageEnvironment& env, MediaSubsession& sub
     u_int8_t* sps = NULL; unsigned spsSize = 0;
     u_int8_t* pps = NULL; unsigned ppsSize = 0;
     unsigned numSPropRecords;
-	RTMPMetadata &meta = ((ont_onvif_playctx*)env.livertmp)->meta;
+	char const *parameter = NULL;
+	RTMPMetadata *meta=NULL;
+	if (env.livertmp)
+	{
+		meta = &((ont_onvif_playctx*)env.livertmp)->meta;
+	}
+
     sourcecodec = -1;
     if (!strcmp(subsession.mediumName(), "video") && !strcmp(subsession.codecName(), "H264"))
     {
+		parameter = subsession.fmtp_spropparametersets();
 
-        SPropRecord* sPropRecords = parseSPropParameterSets(subsession.fmtp_spropparametersets(), numSPropRecords);
-        for (unsigned i = 0; i < numSPropRecords; ++i) {
-            if (sPropRecords[i].sPropLength == 0) 
-                continue; // bad data
-            u_int8_t nal_unit_type = (sPropRecords[i].sPropBytes[0]) & 0x1F;
-            if (nal_unit_type == 7/*SPS*/) {
-                sps = sPropRecords[i].sPropBytes;
-                spsSize = sPropRecords[i].sPropLength;
-            }
-            else if (nal_unit_type == 8/*PPS*/) {
-                pps = sPropRecords[i].sPropBytes;
-                ppsSize = sPropRecords[i].sPropLength;
-            }
-        }
-        if (sps){
-            memcpy(this->latestSps, sps, spsSize);
-            this->sps_len = spsSize;
-        }
-        if (pps){
-            memcpy(this->latestPps, pps, ppsSize);
-            this->pps_len = ppsSize;
-        }
-        delete []sPropRecords;
-        meta.videoCodecid = 7;
+		if (parameter != NULL && parameter[0] != '\0')
+		{
+			SPropRecord* sPropRecords = parseSPropParameterSets(parameter, numSPropRecords);
+			for (unsigned i = 0; i < numSPropRecords; ++i) {
+				if (sPropRecords[i].sPropLength == 0)
+					continue; // bad data
+				u_int8_t nal_unit_type = (sPropRecords[i].sPropBytes[0]) & 0x1F;
+				if (nal_unit_type == 7/*SPS*/) {
+					sps = sPropRecords[i].sPropBytes;
+					spsSize = sPropRecords[i].sPropLength;
+				}
+				else if (nal_unit_type == 8/*PPS*/) {
+					pps = sPropRecords[i].sPropBytes;
+					ppsSize = sPropRecords[i].sPropLength;
+				}
+			}
+			if (sps){
+				memcpy(this->latestSps, sps, spsSize);
+				this->sps_len = spsSize;
+			}
+			if (pps){
+				memcpy(this->latestPps, pps, ppsSize);
+				this->pps_len = ppsSize;
+			}
+			delete[]sPropRecords;
+		}
 
+		if (meta)
+		{
+			meta->videoCodecid = 7;
+		}
         sourcecodec = ONVIF_CODEC_H264;
 		fReceiveBuffer = new u_int8_t[VIDEO_SINK_RECEIVE_BUFFER_SIZE + 16]; //reserve 16 bytes 
         buffersize = VIDEO_SINK_RECEIVE_BUFFER_SIZE;
@@ -70,18 +86,25 @@ ONTVideoAudioSink::ONTVideoAudioSink(UsageEnvironment& env, MediaSubsession& sub
             uint8_t      *_p_extra;
             sourcecodec = ONVIF_CODEC_MPEG4A;
 
-            if ((_p_extra = parseGeneralConfigStr(subsession.fmtp_config(),
-                _i_extra)))
-            {
-                p_extra = new char[_i_extra];
-                memcpy(p_extra, _p_extra, _i_extra);
-                i_extra = _i_extra;
-                delete[] _p_extra;
-            }
-            meta.hasAudio = TRUE;
-            meta.audioCodecid = 10;
-            meta.audioSampleRate = 44100;
-            audioTag = rtmp_make_audio_headerTag(meta.audioCodecid, 3, 1, 1);
+			if (subsession.fmtp_config())
+			{
+				if ((_p_extra = parseGeneralConfigStr(subsession.fmtp_config(),
+					_i_extra)))
+				{
+					p_extra = new char[_i_extra];
+					memcpy(p_extra, _p_extra, _i_extra);
+					i_extra = _i_extra;
+					delete[] _p_extra;
+				}
+			}
+			if (meta)
+			{
+				meta->hasAudio = TRUE;
+				meta->audioCodecid = 10;
+				meta->audioSampleRate = 44100; // not care thesample rate
+				audioTag = rtmp_make_audio_headerTag(meta->audioCodecid, 3, 1, 1);
+			}
+
         }
         fReceiveBuffer = new u_int8_t[AUDIO_SINK_RECEIVE_BUFFER_SIZE+16]; //reserve 16 bytes 
         buffersize = AUDIO_SINK_RECEIVE_BUFFER_SIZE;
@@ -297,6 +320,13 @@ struct timeval presentationTime, unsigned durationInMicroseconds) {
     ONTVideoAudioSink* sink = (ONTVideoAudioSink*)clientData;
     unsigned long ts = (presentationTime.tv_usec / 1000 + presentationTime.tv_sec * 1000);
 	ont_onvif_playctx *rtmp = (ont_onvif_playctx*)sink->envir().livertmp;
+	if (!rtmp)
+	{
+		printf("get %d\n", frameSize);
+		sink->continuePlaying();
+		return;
+	}
+
 	if (rtmp->startts == 0)
     {
 		rtmp->startts = ts;

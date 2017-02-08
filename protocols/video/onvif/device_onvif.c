@@ -7,7 +7,7 @@
 
 #define DEBUG 1
 
-#define M_ONVIFDEVICE_NUMBERS 10
+#define M_ONVIFDEVICE_NUMBERS 30
 
 static device_onvif_list_t _gOnvifDevice = { 0 };
 
@@ -514,6 +514,7 @@ int ont_onvifdevice_adddevice(const char *url, const char*user, const char *pass
     result = ont_onvifdevice_capablity(url, devicePtr);
     if (result < 0)
     {
+		printf("[error]:ont_onvifdevice_capablity fail for url=%s user=%s pass=%\n", devicePtr->strUrl, devicePtr->strUser, devicePtr->strPass);
         return -1;
     }
     memcpy(devicePtr->strUrl, url, strlen(url));
@@ -522,8 +523,11 @@ int ont_onvifdevice_adddevice(const char *url, const char*user, const char *pass
     result = ont_onvifdevice_getprofile(devicePtr);
     if (result < 0)
     {
+		printf("[error]:ont_onvifdevice_getprofile fail for url=%s user=%s pass=%\n", devicePtr->strUrl, devicePtr->strUser, devicePtr->strPass);
         return -1;
     }
+
+	printf("[info]:url=%s has profiles-------------------------------------------------------:\n", devicePtr->strUrl);
     for (i = 0; i < 4; i++)
     {
         if (devicePtr->profiles[i].strprofile[0] != '\0')
@@ -533,6 +537,11 @@ int ont_onvifdevice_adddevice(const char *url, const char*user, const char *pass
             {
                 return -1;
             }
+			printf("profile [%d: level=%d bitrate=%d framterate=%d] \n", 
+				i, 
+				devicePtr->profiles[i].level, 
+				devicePtr->profiles[i].bitrate, 
+				devicePtr->profiles[i].framterate);
         }
     }
 
@@ -540,16 +549,16 @@ int ont_onvifdevice_adddevice(const char *url, const char*user, const char *pass
     {
         return -1;
     }
+
     result = ont_onvifdevice_getconfigurations(devicePtr);
     if (result < 0)
     {
         return -1;
     }
+
     return 0;
 
 }
-
-
 
 device_onvif_t* ont_getonvifdevice(int index)
 {

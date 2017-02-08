@@ -33,13 +33,7 @@ int ont_video_dev_set_channels(void *_dev, int channels)
 	int i = 0;
 	cJSON *json = cJSON_CreateNull();
 
-	//"beginTime" : "2016-10-19 16:30:30",
-	//"endTime" : "2016-10-20 16:30:30",  
-	//"vedioDesc" : "video2"
-
-	cJSON_AddItemToObject(json, "beginTime", cJSON_CreateString(""));
-	cJSON_AddItemToObject(json, "endTime", cJSON_CreateString(""));
-	cJSON_AddItemToObject(json, "vedioDesc", cJSON_CreateString("Nothing to show"));
+	cJSON_AddItemToObject(json, "null", cJSON_CreateString("null"));
     char *jsonValue = cJSON_PrintUnformatted(json);
 	for (i = 0; i < channels; i++)
 	{
@@ -64,6 +58,7 @@ int ont_video_dev_fileinfo_upload(void *_dev, int channel, t_ont_video_file *lis
 
 	cJSON *json = NULL;
 	char *jsonValue = NULL;
+	//example
 	//"beginTime" : "2016-10-19 16:30:30",
 	//"endTime" : "2016-10-20 16:30:30",  
 	//"vedioDesc" : "video2"
@@ -82,6 +77,7 @@ int ont_video_dev_fileinfo_upload(void *_dev, int channel, t_ont_video_file *lis
 	ont_device_send_dp(dev);
 	return 0;
 }
+
 
 
 static int _ont_videocmd_stream_ctrl(ont_device_t *dev, cJSON *cmd)

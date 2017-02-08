@@ -40,7 +40,7 @@ int ont_video_dev_set_channels(void *_dev, int channels)
 	char *jsonValue = cJSON_PrintUnformatted(json);
 	for (i = 0; i < channels; i++)
 	{
-		ont_platform_snprintf(dsname, sizeof(dsname), "ont_video_%d_mqtttestvideo", i + 1);
+		ont_platform_snprintf(dsname, sizeof(dsname), "ont_video_%d_mqtt_test_video", i + 1);
 		ont_device_add_dp_object(dev, dsname, jsonValue);
 	}
 	ont_device_send_dp(dev);
