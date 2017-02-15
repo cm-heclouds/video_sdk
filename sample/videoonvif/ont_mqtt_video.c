@@ -57,7 +57,7 @@ int ont_video_dev_fileinfo_upload(void *_dev, int channel, t_ont_video_file *lis
 	char dsname[64];
 	int i = 0;
 	
-	ont_platform_snprintf(dsname, sizeof(dsname), "ont_video_%d_mqtttestvideo", channel);
+	ont_platform_snprintf(dsname, sizeof(dsname), "ont_video_%d_mqtt_test_video", channel);
 
 	cJSON *json = NULL;
 	char *jsonValue = NULL;

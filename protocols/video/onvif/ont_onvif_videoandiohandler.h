@@ -14,13 +14,15 @@ class ONTVideoAudioSink : public
     MediaSink
 {
 public:
-    static ONTVideoAudioSink* createNew(UsageEnvironment& env,
+	static ONTVideoAudioSink* createNew(
         MediaSubsession& subsession,
+		ont_onvif_playctx *ctx,
         // identifies the kind of data that's being received
         char const* streamId = NULL); // identifies the stream itself (optional)
 
 private:
-    ONTVideoAudioSink(UsageEnvironment& env, MediaSubsession& subsession,
+    ONTVideoAudioSink(MediaSubsession& subsession,
+		ont_onvif_playctx *ctx,
         // identifies the kind of data that's being received
         char const* streamId = NULL);
     // called only by "createNew()"
@@ -31,6 +33,7 @@ private:
 
 
     int h264parse(const unsigned char *buf, unsigned size, unsigned &offset);
+	static void closure(void* clientData);
 
     static void afterGettingFrame(void* clientData, unsigned frameSize,
         unsigned numTruncatedBytes,
@@ -55,6 +58,7 @@ private:
 	uint32_t  sourcecodec; // 
 	unsigned  sendmeta;
 	unsigned  sendaudioheader;
+	ont_onvif_playctx *ctx;
 };
 
 /*VIDEO*/

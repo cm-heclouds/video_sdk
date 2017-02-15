@@ -101,7 +101,7 @@ static void HandleServerBW(RTMP *r, const RTMPPacket *packet);
 static void HandleClientBW(RTMP *r, const RTMPPacket *packet);
 
 static int ReadN(RTMP *r, char *buffer, int n);
-static int WriteN(RTMP *r, const char *buffer, int n);
+static int WriteN(RTMP *r, const char *buffer, int n, int drop);
 
 static void DecodeTEA(AVal *key, AVal *text);
 
@@ -1170,7 +1170,7 @@ ReadN(RTMP *r, char *buffer, int n)
 }
 
 static int
-WriteN(RTMP *r, const char *buffer, int n)
+WriteN(RTMP *r, const char *buffer, int n, int drop)
 {
     const char *ptr = buffer;
     char *ConnectPacket =NULL;
@@ -1230,6 +1230,12 @@ WriteN(RTMP *r, const char *buffer, int n)
             n=1; /*time out*/
             break; 
         }
+        else if (drop)
+        {
+            /*drop the packet*/
+            n = 0;
+            break;
+        }
     }
 
     if (needfree)
@@ -1274,7 +1280,7 @@ SendConnectPacket(RTMP *r, RTMPPacket *cp)
         r->Link.ConnectPacket = TRUE;
 
     if (cp)
-        return RTMP_SendPacket(r, cp, TRUE);
+        return RTMP_SendPacket(r, cp, TRUE, 0);
 
     packet.m_nChannel = 0x03;   /* control channel (invoke) */
     packet.m_headerType = RTMP_PACKET_SIZE_LARGE;
@@ -1374,7 +1380,7 @@ SendConnectPacket(RTMP *r, RTMPPacket *cp)
     }
     packet.m_nBodySize = enc - packet.m_body;
 
-    return RTMP_SendPacket(r, &packet, TRUE);
+    return RTMP_SendPacket(r, &packet, TRUE, 0);
 }
 
 
@@ -1402,7 +1408,7 @@ RTMP_SendCreateStream(RTMP *r)
 
     packet.m_nBodySize = enc - packet.m_body;
 
-    return RTMP_SendPacket(r, &packet, TRUE);
+    return RTMP_SendPacket(r, &packet, TRUE, 0);
 }
 
 SAVC(FCSubscribe);
@@ -1433,7 +1439,7 @@ SendFCSubscribe(RTMP *r, AVal *subscribepath)
 
     packet.m_nBodySize = enc - packet.m_body;
 
-    return RTMP_SendPacket(r, &packet, TRUE);
+    return RTMP_SendPacket(r, &packet, TRUE, 0);
 }
 
 /* Justin.tv specific authentication */
@@ -1465,7 +1471,7 @@ SendUsherToken(RTMP *r, AVal *usherToken)
 
     packet.m_nBodySize = enc - packet.m_body;
 
-    return RTMP_SendPacket(r, &packet, FALSE);
+    return RTMP_SendPacket(r, &packet, FALSE, 0);
 }
 /******************************************/
 
@@ -1496,7 +1502,7 @@ SendReleaseStream(RTMP *r)
 
     packet.m_nBodySize = enc - packet.m_body;
 
-    return RTMP_SendPacket(r, &packet, FALSE);
+    return RTMP_SendPacket(r, &packet, FALSE, 0);
 }
 
 SAVC(FCPublish);
@@ -1526,7 +1532,7 @@ SendFCPublish(RTMP *r)
 
     packet.m_nBodySize = enc - packet.m_body;
 
-    return RTMP_SendPacket(r, &packet, FALSE);
+    return RTMP_SendPacket(r, &packet, FALSE, 0);
 }
 
 SAVC(FCUnpublish);
@@ -1556,7 +1562,7 @@ SendFCUnpublish(RTMP *r)
 
     packet.m_nBodySize = enc - packet.m_body;
 
-    return RTMP_SendPacket(r, &packet, FALSE);
+    return RTMP_SendPacket(r, &packet, FALSE, 0);
 }
 
 SAVC(publish);
@@ -1593,7 +1599,7 @@ SendPublish(RTMP *r)
 
     packet.m_nBodySize = enc - packet.m_body;
 
-    return RTMP_SendPacket(r, &packet, TRUE);
+    return RTMP_SendPacket(r, &packet, TRUE, 0);
 }
 
 SAVC(deleteStream);
@@ -1622,7 +1628,7 @@ SendDeleteStream(RTMP *r, double dStreamId)
     packet.m_nBodySize = enc - packet.m_body;
 
     /* no response expected */
-    return RTMP_SendPacket(r, &packet, FALSE);
+    return RTMP_SendPacket(r, &packet, FALSE, 0);
 }
 
 SAVC(pause);
@@ -1652,7 +1658,7 @@ RTMP_SendPause(RTMP *r, int DoPause, int iTime)
     packet.m_nBodySize = enc - packet.m_body;
 
     RTMP_Log(RTMP_LOGDEBUG, "%s, %d, pauseTime=%d", __FUNCTION__, DoPause, iTime);
-    return RTMP_SendPacket(r, &packet, TRUE);
+    return RTMP_SendPacket(r, &packet, TRUE, 0);
 }
 
 int RTMP_Pause(RTMP *r, int DoPause)
@@ -1690,7 +1696,7 @@ RTMP_SendSeek(RTMP *r, int iTime)
     r->m_read.flags |= RTMP_READ_SEEKING;
     r->m_read.nResumeTS = 0;
 
-    return RTMP_SendPacket(r, &packet, TRUE);
+    return RTMP_SendPacket(r, &packet, TRUE, 0);
 }
 
 int
@@ -1710,7 +1716,7 @@ RTMP_SendServerBW(RTMP *r)
     packet.m_nBodySize = 4;
 
     AMF_EncodeInt32(packet.m_body, pend, r->m_nServerBW);
-    return RTMP_SendPacket(r, &packet, FALSE);
+    return RTMP_SendPacket(r, &packet, FALSE, 0);
 }
 
 int
@@ -1731,7 +1737,7 @@ RTMP_SendClientBW(RTMP *r)
 
     AMF_EncodeInt32(packet.m_body, pend, r->m_nClientBW);
     packet.m_body[4] = r->m_nClientBW2;
-    return RTMP_SendPacket(r, &packet, FALSE);
+    return RTMP_SendPacket(r, &packet, FALSE, 0);
 }
 
 static int
@@ -1754,7 +1760,7 @@ SendBytesReceived(RTMP *r)
     r->m_nBytesInSent = r->m_nBytesIn;
 
     /*RTMP_Log(RTMP_LOGDEBUG, "Send bytes report. 0x%x (%d bytes)", (unsigned int)m_nBytesIn, m_nBytesIn); */
-    return RTMP_SendPacket(r, &packet, FALSE);
+    return RTMP_SendPacket(r, &packet, FALSE, 0);
 }
 
 SAVC(_checkbw);
@@ -1782,7 +1788,7 @@ SendCheckBW(RTMP *r)
     packet.m_nBodySize = enc - packet.m_body;
 
     /* triggers _onbwcheck and eventually results in _onbwdone */
-    return RTMP_SendPacket(r, &packet, FALSE);
+    return RTMP_SendPacket(r, &packet, FALSE, 0);
 }
 
 SAVC(_result);
@@ -1810,7 +1816,7 @@ SendCheckBWResult(RTMP *r, double txn)
 
     packet.m_nBodySize = enc - packet.m_body;
 
-    return RTMP_SendPacket(r, &packet, FALSE);
+    return RTMP_SendPacket(r, &packet, FALSE, 0);
 }
 
 SAVC(ping);
@@ -1838,7 +1844,7 @@ SendPong(RTMP *r, double txn)
 
     packet.m_nBodySize = enc - packet.m_body;
 
-    return RTMP_SendPacket(r, &packet, FALSE);
+    return RTMP_SendPacket(r, &packet, FALSE, 0);
 }
 
 SAVC(play);
@@ -1903,7 +1909,7 @@ SendPlay(RTMP *r)
 
     packet.m_nBodySize = enc - packet.m_body;
 
-    return RTMP_SendPacket(r, &packet, TRUE);
+    return RTMP_SendPacket(r, &packet, TRUE, 0);
 }
 
 SAVC(set_playlist);
@@ -1944,7 +1950,7 @@ SendPlaylist(RTMP *r)
 
     packet.m_nBodySize = enc - packet.m_body;
 
-    return RTMP_SendPacket(r, &packet, TRUE);
+    return RTMP_SendPacket(r, &packet, TRUE, 0);
 }
 
 static int
@@ -1972,7 +1978,7 @@ SendSecureTokenResponse(RTMP *r, AVal *resp)
 
     packet.m_nBodySize = enc - packet.m_body;
 
-    return RTMP_SendPacket(r, &packet, FALSE);
+    return RTMP_SendPacket(r, &packet, FALSE, 0);
 }
 
 /*
@@ -2049,7 +2055,7 @@ RTMP_SendCtrl(RTMP *r, short nType, unsigned int nObject, unsigned int nTime)
             buf = AMF_EncodeInt32(buf, pend, nTime);
     }
 
-    return RTMP_SendPacket(r, &packet, FALSE);
+    return RTMP_SendPacket(r, &packet, FALSE, 0);
 }
 
 static void
@@ -3177,7 +3183,7 @@ HandShake(RTMP *r, int FP9HandShake)
         clientsig[i] = (char)(rand() % 256);
 #endif
 
-    if (!WriteN(r, clientbuf, RTMP_SIG_SIZE + 1))
+    if (!WriteN(r, clientbuf, RTMP_SIG_SIZE + 1, 0))
         return FALSE;
 
     if (ReadN(r, &type, 1) != 1)    /* 0x03 or 0x06 */
@@ -3207,7 +3213,7 @@ HandShake(RTMP *r, int FP9HandShake)
         serversig[4], serversig[5], serversig[6], serversig[7]);
 
     /* 2nd part of handshake */
-    if (!WriteN(r, serversig, RTMP_SIG_SIZE))
+    if (!WriteN(r, serversig, RTMP_SIG_SIZE, 0))
         return FALSE;
 
     if (ReadN(r, serversig, RTMP_SIG_SIZE) != RTMP_SIG_SIZE)
@@ -3239,16 +3245,16 @@ RTMP_SendChunk(RTMP *r, RTMPChunk *chunk)
         /* save header bytes we're about to overwrite */
         memcpy(hbuf, ptr, chunk->c_headerSize);
         memcpy(ptr, chunk->c_header, chunk->c_headerSize);
-        wrote = WriteN(r, ptr, chunk->c_headerSize + chunk->c_chunkSize);
+        wrote = WriteN(r, ptr, chunk->c_headerSize + chunk->c_chunkSize, 0);
         memcpy(ptr, hbuf, chunk->c_headerSize);
     }
     else
-        wrote = WriteN(r, chunk->c_header, chunk->c_headerSize);
+        wrote = WriteN(r, chunk->c_header, chunk->c_headerSize, 0);
     return wrote;
 }
 
 int
-RTMP_SendPacket(RTMP *r, RTMPPacket *packet, int queue)
+RTMP_SendPacket(RTMP *r, RTMPPacket *packet, int queue, int drop)
 {
     const RTMPPacket *prevPacket = r->m_vecChannelsOut[packet->m_nChannel];
     uint32_t last = 0;
@@ -3387,7 +3393,7 @@ RTMP_SendPacket(RTMP *r, RTMPPacket *packet, int queue)
         }
         else
         {
-            wrote = WriteN(r, header, nChunkSize + hSize);
+            wrote = WriteN(r, header, nChunkSize + hSize, 0);
             if (!wrote)
                 return FALSE;
         }
@@ -3418,7 +3424,7 @@ RTMP_SendPacket(RTMP *r, RTMPPacket *packet, int queue)
     }
     if (tbuf)
     {
-        int wrote = WriteN(r, tbuf, toff - tbuf);
+        int wrote = WriteN(r, tbuf, toff - tbuf, drop);
         ont_platform_free(tbuf);
         tbuf = NULL;
         if (!wrote)
@@ -3860,7 +3866,7 @@ RTMP_Write(RTMP *r, const char *buf, int size)
         buf += num;
         if (pkt->m_nBytesRead == pkt->m_nBodySize)
         {
-            ret = RTMP_SendPacket(r, pkt, FALSE);
+            ret = RTMP_SendPacket(r, pkt, FALSE, 0);
             RTMPPacket_Free(pkt);
             pkt->m_nBytesRead = 0;
             if (!ret)
@@ -3898,7 +3904,7 @@ SendCustomCommand(RTMP *r, AVal *Command, int queue)
         return FALSE;
     packet.m_nBodySize = enc - packet.m_body;
 
-    return RTMP_SendPacket(r, &packet, queue);
+    return RTMP_SendPacket(r, &packet, queue, 0);
 }
 
 static int

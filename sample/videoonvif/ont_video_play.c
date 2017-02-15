@@ -23,10 +23,12 @@ typedef  struct
 
 ont_list_t *g_list = NULL;
 
-#define VARAIBLE_CHECK if(!g_list) { g_list = ont_list_create();}
+#define VARAIBLE_CHECK if(!g_list) { g_list = ont_list_create(); play_env = ont_onvifdevice_create_playenv();}
 
 
 static int compareliveFlag(t_playlist *d1, t_playlist *d2);
+
+static void *play_env = NULL;
 
 
 static int ont_video_live_stream_start_level(void *dev, int channel, const char *push_url, const char* deviceid, int level)
@@ -47,7 +49,7 @@ static int ont_video_live_stream_start_level(void *dev, int channel, const char 
 
 	do
 	{
-		ctx = ont_onvifdevice_live_stream_start(channel, push_url, deviceid, level);
+		ctx = ont_onvifdevice_live_stream_start(play_env, channel, push_url, deviceid, level);
 		if (!ctx)
 		{
 			break;
@@ -198,7 +200,7 @@ void ont_video_dev_ptz_ctrl(void *dev, int channel, int mode, t_ont_video_ptz_cm
 }
 
 static int delta = 0;
-void singlestep(void *data, void *context)
+void vodsinglestep(void *data, void *context)
 {
 	if (!data)
 	{
@@ -216,12 +218,9 @@ void singlestep(void *data, void *context)
 	}
 	else
 	{
-		if (ont_onvifdevice_live_stream_singlestep(play->playctx) < 0)
-		{
-			play->closeflag = 1;
-		}
 		delta = 0;
 	}
+
 	if (localDelta>0 && localDelta < delta)
 	{
 		delta = localDelta;
@@ -231,10 +230,16 @@ void singlestep(void *data, void *context)
 
 int _checkcloseFlag(t_playlist *d1, t_playlist *d2)
 {
-	if (d1->closeflag == 1)
+	ont_onvif_playctx *ctx = d1->playctx;
+	if (d1->rvod && d1->closeflag == 1)
 	{
 		return 0;
 	}
+	if (!d1->rvod && ctx->state)
+	{
+		return 0; /*need closed*/
+	}
+	
 	return -1;
 }
 
@@ -274,7 +279,8 @@ int ont_video_playlist_singlestep(void *dev)
 {
 	VARAIBLE_CHECK;
 	delta = 10;
-	ont_list_foreach(g_list, singlestep, dev);
+	ont_list_foreach(g_list, vodsinglestep, dev);
+	ont_onvifdevice_live_stream_singlestep(play_env, 0);
 	_checkneedclose(dev);
 	return delta;
 }

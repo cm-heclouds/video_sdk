@@ -24,7 +24,7 @@ void subsessionByeHandler(void* clientData);
 void streamTimerHandler(void* clientData);
 
 // The main streaming routine (for each "rtsp://" URL):
-static void* openURL(UsageEnvironment& env, char const* progName, char const* rtspURL);
+static void* openURL(ont_onvif_playctx *ctx, char const* progName, char const* rtspURL);
 
 // Used to iterate through each stream's 'subsessions', setting up each one:
 void setupNextSubsession(RTSPClient* rtspClient);
@@ -75,6 +75,10 @@ public:
         int verbosityLevel = 0,
         char const* applicationName = NULL,
         portNumBits tunnelOverHTTPPortNum = 0);
+
+	void setplayctx(void *ctx) { playctx = ctx; }
+	void *getplayctx() { return playctx; }
+
 protected:
     ourRTSPClient(UsageEnvironment& env, char const* rtspURL,
         int verbosityLevel, char const* applicationName, portNumBits tunnelOverHTTPPortNum);
@@ -82,25 +86,29 @@ protected:
     virtual ~ourRTSPClient();
 
 public:
+	void *playctx;
     StreamClientState scs;
 };
 
 #define RTSP_CLIENT_VERBOSITY_LEVEL 1 // by default, print verbose output from each "RTSPClient"
 
 
-static void* openURL(UsageEnvironment& env, char const* progName, char const* rtspURL) {
+static void* openURL(ont_onvif_playctx *ctx,char const* progName, char const* rtspURL) {
     // Begin by creating a "RTSPClient" object.  Note that there is a separate "RTSPClient" object for each stream that we wish
     // to receive (even if more than stream uses the same "rtsp://" URL).
-    RTSPClient* rtspClient = ourRTSPClient::createNew(env, rtspURL, RTSP_CLIENT_VERBOSITY_LEVEL, progName);
+	UsageEnvironment &env = *(UsageEnvironment*)ctx->play_env;
+	ourRTSPClient* rtspClient = ourRTSPClient::createNew(env, rtspURL, RTSP_CLIENT_VERBOSITY_LEVEL, progName);
     if (rtspClient == NULL) {
-        env << "Failed to create a RTSP client for URL \"" << rtspURL << "\": " << env.getResultMsg() << "\n";
+		env << "Failed to create a RTSP client for URL \"" << rtspURL << "\": " << env.getResultMsg() << "\n";
         return NULL;
     }
 
     // Next, send a RTSP "DESCRIBE" command, to get a SDP description for the stream.
     // Note that this command - like all RTSP commands - is sent asynchronously; we do not block, waiting for a response.
     // Instead, the following function call returns immediately, and we handle the RTSP response later, from within the event loop:
-    rtspClient->sendDescribeCommand(continueAfterDESCRIBE);
+	rtspClient->setplayctx(ctx);
+	rtspClient->sendDescribeCommand(continueAfterDESCRIBE);
+
     return rtspClient;
 }
 
@@ -213,8 +221,9 @@ void continueAfterSETUP(RTSPClient* rtspClient, int resultCode, char* resultStri
         // after we've sent a RTSP "PLAY" command.)
 
         //
-        scs.subsession->sink = ONTVideoAudioSink::createNew(env, 
+        scs.subsession->sink = ONTVideoAudioSink::createNew(
             *scs.subsession,
+			 (ont_onvif_playctx*)((ourRTSPClient*)rtspClient)->getplayctx(),
             rtspClient->url());
 
         // perhaps use your own custom "MediaSink" subclass instead
@@ -400,15 +409,14 @@ StreamClientState::~StreamClientState() {
 }
 
 
-int ont_onvifdevice_stream_ctrl(void *ctx, int level)
+int ont_onvifdevice_stream_ctrl(void *playctx, int level)
 {	
     /*change the source*/
-    if (!ctx)
+	if (!playctx)
     {
         return -1;
     }
-    BasicUsageEnvironment* env = (BasicUsageEnvironment*)ctx;
-	ont_onvif_playctx *r = (ont_onvif_playctx*)env->livertmp;
+	ont_onvif_playctx *r = (ont_onvif_playctx*)playctx;
     device_onvif_t *deviceptr = ont_getonvifdevice(r->channel);
     const char *c_url =ont_geturl_level(deviceptr, level, &r->meta);
     if (!c_url)
@@ -426,13 +434,9 @@ int ont_onvifdevice_stream_ctrl(void *ctx, int level)
     }
 	
 	memset(&r->meta, 0x00, sizeof(r->meta));
-
-
     string urlPrefix;
     string playurl;
-    // Begin by setting up our usage environment:
-    TaskScheduler* scheduler = &env->taskScheduler();
-
+    
     if (strlen(deviceptr->strUser) > 0)
     {
         urlPrefix = string(deviceptr->strUser);
@@ -443,9 +447,8 @@ int ont_onvifdevice_stream_ctrl(void *ctx, int level)
     }
     playurl = "rtsp://" + urlPrefix + "@" + url.substr(7);
     //env->rtmp = r;
-    env->livertmp = r;
 	
-    void *rtspClient = openURL(*env, NULL, playurl.c_str()); //need free the rtspclient resource
+    void *rtspClient = openURL(r, NULL, playurl.c_str()); //need free the rtspclient resource
     if (rtspClient){
         r->rtsp_client = rtspClient;
     }
@@ -453,14 +456,31 @@ int ont_onvifdevice_stream_ctrl(void *ctx, int level)
         goto _end;
     }
     //openURL(*env, NULL, deviceptr->strPlayurl);
-    r->eventLoopWatchVariable = 0;
+	r->state = 0;
     return 0;
 _end:
     return -1;
 }
 
 
-void* ont_onvifdevice_live_stream_start(int channel, const char *push_url, const char*deviceid, int level)
+
+void *ont_onvifdevice_create_playenv()
+{
+    TaskScheduler* scheduler = BasicTaskScheduler::createNew();
+    BasicUsageEnvironment* env = BasicUsageEnvironment::createNew(*scheduler);
+    return env;
+}
+
+void ont_onvifdevice_delete_playenv(void *penv)
+{
+	BasicUsageEnvironment* env = (BasicUsageEnvironment*)penv;
+	TaskScheduler &scheduler = env->taskScheduler();
+    delete &scheduler;
+    delete env;
+}
+
+
+void* ont_onvifdevice_live_stream_start(void *penv, int channel, const char *push_url, const char*deviceid, int level)
 {
     device_onvif_t *deviceptr = ont_getonvifdevice(channel);
     //use the default leve 3.
@@ -468,9 +488,8 @@ void* ont_onvifdevice_live_stream_start(int channel, const char *push_url, const
     string playurl;
 	const char*c_url = NULL;
     // Begin by setting up our usage environment:
-    TaskScheduler* scheduler = BasicTaskScheduler::createNew();
-    BasicUsageEnvironment* env = BasicUsageEnvironment::createNew(*scheduler);
-	ont_onvif_playctx *r = new ont_onvif_playctx;
+
+	ont_onvif_playctx *r = (ont_onvif_playctx *)ont_platform_malloc(sizeof(ont_onvif_playctx));
 	memset(r, 0x00, sizeof(ont_onvif_playctx));
 	
 	c_url = ont_geturl_level(deviceptr, level, &r->meta);
@@ -486,7 +505,8 @@ void* ont_onvifdevice_live_stream_start(int channel, const char *push_url, const
     r->rtsp_client = NULL;
     r->rtmp_client = NULL;
     r->channel = channel;
-	r->startts = 0;
+	r->startts = r->last_sndts= 0;
+    r->play_env = penv;
     r->rtmp_client = (RTMP*)rtmp_create_publishstream(push_url, 10, deviceid);
     do
     {
@@ -504,9 +524,8 @@ void* ont_onvifdevice_live_stream_start(int channel, const char *push_url, const
         }
         playurl = "rtsp://" + urlPrefix + "@" + url.substr(7);
         //env->rtmp = r;
-        env->livertmp = r;
 
-        void *rtspClient = openURL(*env, NULL, playurl.c_str()); //need free the rtspclient resource
+        void *rtspClient = openURL(r, NULL, playurl.c_str()); //need free the rtspclient resource
         if (rtspClient)
         {
             r->rtsp_client = rtspClient;
@@ -515,10 +534,9 @@ void* ont_onvifdevice_live_stream_start(int channel, const char *push_url, const
         {
             break;
         }
-        
         //openURL(*env, NULL, deviceptr->strPlayurl);
-        r->eventLoopWatchVariable = 0;
-        return env;
+		r->state = 0;
+        return r;
     }while (0);
     
     if (r->rtsp_client){
@@ -531,36 +549,22 @@ void* ont_onvifdevice_live_stream_start(int channel, const char *push_url, const
         RTMP_Close((RTMP*)r->rtmp_client);
         RTMP_Free((RTMP*)r->rtmp_client);
     }
-    delete r;
-    delete env;
-    delete scheduler;
+    ont_platform_free(r);
     return NULL;
 }
 
 
-int ont_onvifdevice_live_stream_singlestep(void *ctx)
+int ont_onvifdevice_live_stream_singlestep(void *penv, int maxdelay)
 {
-    BasicUsageEnvironment* env = (BasicUsageEnvironment*)ctx;
-	ont_onvif_playctx *r = (ont_onvif_playctx*)env->livertmp;
-	if (rtmp_check_rcv_handler(r->rtmp_client) < 0)
-	{
-		return -1;
-	}
-    env->taskScheduler().SingleStep();
-	if (r->eventLoopWatchVariable != 0)
-	{
-		return -1;
-	}
+	BasicUsageEnvironment* env = (BasicUsageEnvironment*)penv;
+    env->taskScheduler().SingleStep(maxdelay);
 	return 0;
 }
 
-
 void ont_onvifdevice_live_stream_stop(void *ctx)
 {
-    BasicUsageEnvironment* env = (BasicUsageEnvironment*)ctx;
-	ont_onvif_playctx *r = (ont_onvif_playctx*)env->livertmp;
-    TaskScheduler *scheduler = &env->taskScheduler();
-
+    ont_onvif_playctx* r = (ont_onvif_playctx*)ctx;
+    
     if (r->rtsp_client){
         shutdownStream((RTSPClient*)r->rtsp_client, 1);
     }
@@ -571,9 +575,7 @@ void ont_onvifdevice_live_stream_stop(void *ctx)
         RTMP_Close((RTMP*)r->rtmp_client);
         RTMP_Free((RTMP*)r->rtmp_client);
     }
-    delete r;
-    delete scheduler;
-    delete env;
+    ont_platform_free(r);
 }
 
 
@@ -585,9 +587,9 @@ extern "C" void* _test_live_stream_start(int channel, const char *push_url, cons
 	// Begin by setting up our usage environment:
 	TaskScheduler* scheduler = BasicTaskScheduler::createNew();
 	BasicUsageEnvironment* env = BasicUsageEnvironment::createNew(*scheduler);
-	env->livertmp = NULL;
 	c_url = "rtsp://admin:test123456@192.168.217.133:554/Streaming/Channels/101?transportmode=unicast&profile=Profile_1 RTSP/1.0";
-	void *rtspClient = openURL(*env, NULL, c_url); //need free the rtspclient resource
+	//void *rtspClient = openURL(*env, NULL, c_url); //need free the rtspclient resource
+	(void)c_url;
 	while (1)
 	{
 		env->taskScheduler().SingleStep();

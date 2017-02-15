@@ -90,7 +90,6 @@ public:
   void* liveMediaPriv;
   void* groupsockPriv;
   //a pointer to ont rtmp 
-  void* livertmp;
 protected:
   UsageEnvironment(TaskScheduler& scheduler); // abstract base class
   virtual ~UsageEnvironment(); // we are deleted only by reclaim()

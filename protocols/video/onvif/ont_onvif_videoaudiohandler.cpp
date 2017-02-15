@@ -9,33 +9,35 @@
 #define VIDEO_SINK_RECEIVE_BUFFER_SIZE 1000000
 #define AUDIO_SINK_RECEIVE_BUFFER_SIZE 1000
 
-ONTVideoAudioSink* ONTVideoAudioSink::createNew(UsageEnvironment& env,
-    MediaSubsession& subsession,
-    // identifies the kind of data that's being received
+ONTVideoAudioSink* ONTVideoAudioSink::createNew( MediaSubsession& subsession, 
+    ont_onvif_playctx *ctx,
+	// identifies the kind of data that's being received
     char const* streamId) // identifies the stream itself (optional)
 {
 	if (strcmp(subsession.mediumName(), "audio") && strcmp(subsession.mediumName(), "video"))
 	{
 		return NULL;
 	}
-    return new ONTVideoAudioSink(env, subsession, streamId);
+	return new ONTVideoAudioSink(subsession, ctx, streamId);
 }
 
-ONTVideoAudioSink::ONTVideoAudioSink(UsageEnvironment& env, MediaSubsession& subsession,
+ONTVideoAudioSink::ONTVideoAudioSink(MediaSubsession& subsession,
+	ont_onvif_playctx *ctx,
     // identifies the kind of data that's being received
     char const* streamId):
-    MediaSink(env),
-    p_extra(NULL),
-    fSubsession(subsession) 
+    MediaSink(*((UsageEnvironment*)ctx->play_env)),
+    fSubsession(subsession),
+    p_extra(NULL)
 {
     u_int8_t* sps = NULL; unsigned spsSize = 0;
     u_int8_t* pps = NULL; unsigned ppsSize = 0;
     unsigned numSPropRecords;
 	char const *parameter = NULL;
 	RTMPMetadata *meta=NULL;
-	if (env.livertmp)
+    this->ctx = ctx;
+	if (ctx->rtmp_client)
 	{
-		meta = &((ont_onvif_playctx*)env.livertmp)->meta;
+		meta = &ctx->meta;
 	}
 
     sourcecodec = -1;
@@ -108,7 +110,6 @@ ONTVideoAudioSink::ONTVideoAudioSink(UsageEnvironment& env, MediaSubsession& sub
         }
         fReceiveBuffer = new u_int8_t[AUDIO_SINK_RECEIVE_BUFFER_SIZE+16]; //reserve 16 bytes 
         buffersize = AUDIO_SINK_RECEIVE_BUFFER_SIZE;
-
     }
     else
     {
@@ -212,13 +213,13 @@ int packFLVvideodata(const unsigned char *in, unsigned inSize, unsigned char* ou
 
 int ONTVideoAudioSink::handleVideoFrame(unsigned frameSize, unsigned numTruncatedBytes, unsigned int deltaTs)
 {
-	ont_onvif_playctx *rtmp = (ont_onvif_playctx*)this->envir().livertmp;
+	ont_onvif_playctx *playctx = this->ctx;
     unsigned int offset = 0;
     unsigned int parseSize = 0;
     unsigned char *buf = this->fReceiveBuffer;
-    if (rtmp->tempBuf == NULL){
-        rtmp->tempBuf = (unsigned char*)malloc(1024);
-        rtmp->tempBufSize = 1024;
+    if (playctx->tempBuf == NULL){
+        playctx->tempBuf = (unsigned char*)malloc(1024);
+        playctx->tempBufSize = 1024;
     }
     do
     {
@@ -251,39 +252,39 @@ int ONTVideoAudioSink::handleVideoFrame(unsigned frameSize, unsigned numTruncate
             if (sendmeta == 0)
             {
                 sendmeta = 1;
-                rtmp->meta.duration = 0;
-                if (rtmp->meta.width == 0)
+                playctx->meta.duration = 0;
+                if (playctx->meta.width == 0)
                 {
-                    h264_decode_seq_parameter_set(latestSps, this->sps_len, rtmp->meta.width, rtmp->meta.height);
+                    h264_decode_seq_parameter_set(latestSps, this->sps_len, playctx->meta.width, playctx->meta.height);
                 }
-                rtmp_send_metadata(rtmp->rtmp_client, &rtmp->meta);
+                rtmp_send_metadata(playctx->rtmp_client, &playctx->meta);
 
             }
-			rtmp_send_spspps(rtmp->rtmp_client, (unsigned char*)this->latestSps, this->sps_len, (unsigned char *)this->latestPps, this->pps_len, deltaTs);
-            if (rtmp->tempBufSize < parseSize + 9) /*need reserve 9 bytes for FLV video tag*/
+			rtmp_send_spspps(playctx->rtmp_client, (unsigned char*)this->latestSps, this->sps_len, (unsigned char *)this->latestPps, this->pps_len, deltaTs);
+            if (playctx->tempBufSize < parseSize + 9) /*need reserve 9 bytes for FLV video tag*/
             {
-                free(rtmp->tempBuf);
-                rtmp->tempBuf = (unsigned char*)malloc(parseSize + 9);
-                rtmp->tempBufSize = parseSize + 9;
+                free(playctx->tempBuf);
+                playctx->tempBuf = (unsigned char*)malloc(parseSize + 9);
+                playctx->tempBufSize = parseSize + 9;
             }
-            int outsize = packFLVvideodata(&buf[offset], parseSize, rtmp->tempBuf, rtmp->tempBufSize, TRUE);
-            if (rtmp_send_videodata(rtmp->rtmp_client, rtmp->tempBuf, outsize, deltaTs, TRUE) < 0){
+            int outsize = packFLVvideodata(&buf[offset], parseSize, playctx->tempBuf, playctx->tempBufSize, TRUE);
+            if (rtmp_send_videodata(playctx->rtmp_client, playctx->tempBuf, outsize, deltaTs, TRUE) < 0){
                 /*send error, need reopen*/
                 RTMP_Log(RTMP_LOGDEBUG, "need closed");
-                rtmp->eventLoopWatchVariable = 1;
+				playctx->state = 1;
             }
         }
         else { /*p frame, etc.*/
-            if (rtmp->tempBufSize < parseSize + 9) /*need reserve 9 bytes for FLV video tag*/
+            if (playctx->tempBufSize < parseSize + 9) /*need reserve 9 bytes for FLV video tag*/
             {
-                free(rtmp->tempBuf);
-                rtmp->tempBuf = (unsigned char*)malloc(parseSize + 9);
-                rtmp->tempBufSize = parseSize + 9;
+                free(playctx->tempBuf);
+                playctx->tempBuf = (unsigned char*)malloc(parseSize + 9);
+                playctx->tempBufSize = parseSize + 9;
             }
-            int outsize = packFLVvideodata(&buf[offset], parseSize, rtmp->tempBuf, rtmp->tempBufSize, FALSE);
-            if (rtmp_send_videodata(rtmp->rtmp_client, rtmp->tempBuf, outsize, deltaTs, FALSE) < 0){
+            int outsize = packFLVvideodata(&buf[offset], parseSize, playctx->tempBuf, playctx->tempBufSize, FALSE);
+            if (rtmp_send_videodata(playctx->rtmp_client, playctx->tempBuf, outsize, deltaTs, FALSE) < 0){
                 RTMP_Log(RTMP_LOGDEBUG, "need closed");
-                rtmp->eventLoopWatchVariable = 1;
+				playctx->state = 1;
             }
         }
         offset += parseSize;
@@ -293,7 +294,7 @@ int ONTVideoAudioSink::handleVideoFrame(unsigned frameSize, unsigned numTruncate
 
 int ONTVideoAudioSink::handleAACFrame(unsigned frameSize, unsigned numTruncatedBytes, unsigned int deltaTs)
 {
-	ont_onvif_playctx *rtmp = (ont_onvif_playctx*)this->envir().livertmp;
+	ont_onvif_playctx *playctx = this->ctx;
 	if (!sendmeta)
 	{
 		return 0 ;
@@ -305,10 +306,10 @@ int ONTVideoAudioSink::handleAACFrame(unsigned frameSize, unsigned numTruncatedB
         audio_data[0] = 0x00;
         audio_data[1] = p_extra[0];
         audio_data[2] = p_extra[1];
-        rtmp_send_audiodata(rtmp->rtmp_client, audioTag, audio_data, 3, 0, RTMP_PACKET_SIZE_LARGE);
+        rtmp_send_audiodata(playctx->rtmp_client, audioTag, audio_data, 3, 0, RTMP_PACKET_SIZE_LARGE);
     }
     fReceiveBuffer[0] = 0x01;
-    rtmp_send_audiodata(rtmp->rtmp_client, audioTag, fReceiveBuffer, frameSize + 1, deltaTs, deltaTs == 0 ? RTMP_PACKET_SIZE_LARGE : RTMP_PACKET_SIZE_MEDIUM);
+    rtmp_send_audiodata(playctx->rtmp_client, audioTag, fReceiveBuffer, frameSize + 1, deltaTs, deltaTs == 0 ? RTMP_PACKET_SIZE_LARGE : RTMP_PACKET_SIZE_MEDIUM);
 
     return 0;
 }
@@ -319,29 +320,42 @@ void ONTVideoAudioSink::afterGettingFrame(void* clientData, unsigned frameSize, 
 struct timeval presentationTime, unsigned durationInMicroseconds) {
     ONTVideoAudioSink* sink = (ONTVideoAudioSink*)clientData;
     unsigned long ts = (presentationTime.tv_usec / 1000 + presentationTime.tv_sec * 1000);
-	ont_onvif_playctx *rtmp = (ont_onvif_playctx*)sink->envir().livertmp;
-	if (!rtmp)
+	ont_onvif_playctx *playctx = (ont_onvif_playctx*)sink->ctx;
+	if (!playctx)
 	{
 		printf("get %d\n", frameSize);
 		sink->continuePlaying();
 		return;
 	}
+	playctx->last_sndts = ts;
 
-	if (rtmp->startts == 0)
+	if (playctx->startts == 0)
     {
-		rtmp->startts = ts;
+		playctx->startts = ts;
     }
-	unsigned deltaTs = ts - rtmp->startts;
+	unsigned deltaTs = ts - playctx->startts;
 
     if (sink->sourcecodec == ONVIF_CODEC_H264) //video
     {
         sink->handleVideoFrame(frameSize, numTruncatedBytes, deltaTs);
     }
-    else if (sink->sourcecodec == ONVIF_CODEC_MPEG4A)
-    {
-        sink->handleAACFrame(frameSize, numTruncatedBytes, deltaTs);
-    }
+	else if (sink->sourcecodec == ONVIF_CODEC_MPEG4A)
+	{
+		sink->handleAACFrame(frameSize, numTruncatedBytes, deltaTs);
+	}
+
     sink->continuePlaying();
+}
+
+
+
+void ONTVideoAudioSink::closure(void* clientData)
+{
+	ONTVideoAudioSink* sink = (ONTVideoAudioSink*)clientData;
+	ont_onvif_playctx *playctx = (ont_onvif_playctx*)sink->ctx;
+	playctx->state = 1;
+    RTMP_Log(RTMP_LOGDEBUG, "close");
+	sink->onSourceClosure();
 }
 
 #define DEBUG_PRINT_EACH_RECEIVED_FRAME 1
@@ -354,13 +368,13 @@ Boolean ONTVideoAudioSink::continuePlaying() {
     {
         fSource->getNextFrame(fReceiveBuffer+1, buffersize-1,
             afterGettingFrame, this,
-            onSourceClosure, this);
+			closure, this);
     }
     else
     {
         fSource->getNextFrame(fReceiveBuffer, buffersize,
             afterGettingFrame, this,
-            onSourceClosure, this);
+			closure, this);
     }
     return True;
 }

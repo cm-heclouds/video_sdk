@@ -335,7 +335,7 @@ extern "C"
   int RTMP_Serve(RTMP *r);
 
   int RTMP_ReadPacket(RTMP *r, RTMPPacket *packet);
-  int RTMP_SendPacket(RTMP *r, RTMPPacket *packet, int queue);
+  int RTMP_SendPacket(RTMP *r, RTMPPacket *packet, int queue, int drop);
   int RTMP_SendChunk(RTMP *r, RTMPChunk *chunk);
   int RTMP_IsConnected(RTMP *r);
   int RTMP_IsTimedout(RTMP *r);

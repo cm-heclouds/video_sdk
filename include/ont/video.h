@@ -171,7 +171,7 @@ extern "C" {
     /*@param headertag  音频数据格式                                        */
     /*@param data 音频数据                                                  */
     /*@param size 音频大小                                                  */
-    /*@param size 音频时间戳                                                    */
+    /*@param ts 音频时间戳                                                  */
     /************************************************************************/
     int rtmp_send_audiodata(void* rtmp, unsigned char headertag, unsigned char *data, unsigned int size, unsigned int ts, unsigned int headertype);
 

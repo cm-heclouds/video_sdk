@@ -71,7 +71,7 @@ int rtmp_send_spspps(void *_r, unsigned char * sps, int sps_len, unsigned char *
     packet->m_nInfoField2 = r->m_stream_id;
 
     /*调用发送接口*/
-    int nRet = RTMP_SendPacket(r, packet, FALSE);
+    int nRet = RTMP_SendPacket(r, packet, FALSE, 0);
     ont_platform_free(packet);   
     return nRet==TRUE?0:-1;
 }
@@ -100,7 +100,7 @@ static int _rtmp_setchunksize(RTMP* rtmp, uint32_t size)
     packet->m_hasAbsTimestamp = 0;
     packet->m_headerType = RTMP_PACKET_SIZE_MEDIUM;
     packet->m_nInfoField2 = 0; 
-    int nRet =  RTMP_SendPacket(r, packet, FALSE);
+    int nRet =  RTMP_SendPacket(r, packet, FALSE, 0);
     if (nRet)
     {
         r->m_outChunkSize = size;
@@ -262,7 +262,7 @@ int rtmp_send_metadata(void* r, RTMPMetadata *metadata)
     packet.m_headerType = RTMP_PACKET_SIZE_LARGE;
     packet.m_nInfoField2 = rtmp->m_stream_id;
 
-    ret = RTMP_SendPacket(rtmp, &packet, 0);
+    ret = RTMP_SendPacket(rtmp, &packet, 0, 0);
 
     RTMPPacket_Free(&packet);
 
@@ -336,7 +336,7 @@ int rtmp_send_videodata(void* r, unsigned char *data, unsigned int size, unsigne
     memcpy(packet.m_body, data, size);
     packet.m_nBodySize += size;
 
-    int nRet = RTMP_SendPacket(rtmp, &packet, 0);
+    int nRet = RTMP_SendPacket(rtmp, &packet, 0, keyFrame?0:1);
 
 
     RTMPPacket_Free(&packet);
@@ -368,7 +368,7 @@ int rtmp_send_audiodata(void* r, unsigned char headertag, unsigned char *data, u
     memcpy(packet.m_body+1, data, size);
     packet.m_nBodySize += size;
 
-    int nRet = RTMP_SendPacket(rtmp, &packet, 0);
+    int nRet = RTMP_SendPacket(rtmp, &packet, 0, 0);
 
     RTMPPacket_Free(&packet);
     return nRet==TRUE?0:-1;

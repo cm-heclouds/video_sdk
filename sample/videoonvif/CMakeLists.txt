@@ -51,6 +51,4 @@ if(UNIX OR CYGWIN)
 endif(UNIX OR CYGWIN)
 
 
-
-
 target_link_libraries(sample_${VIDEO}_onvif ${MQTT} ${VIDEO} ${ONVIF} ${LIVERTSP} ${LIBS})

@@ -136,11 +136,6 @@ LONG ApplicationCrashHandler(EXCEPTION_POINTERS *pException)
 }
 #endif
 
-struct testDump
-{
-	int a;
-	int b;
-};
 
 
 int main( int argc, char *argv[] )
@@ -158,8 +153,8 @@ int main( int argc, char *argv[] )
 	int chnnum = 0;
     
 	//_test_live_stream_start();
-	cfg_initilize("E:\\share\\video_sdk\\bin\\Debug\\config.json");
-	//cfg_initilize("config.json");
+	//cfg_initilize("E:\\share\\video_sdk\\bin\\Debug\\config.json");
+	cfg_initilize("config.json");
 	int product_id = cfg_get_profile()->productid;
 
 
