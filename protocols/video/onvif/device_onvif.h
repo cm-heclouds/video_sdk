@@ -48,6 +48,8 @@ typedef struct
     char strSearch[256];
     char strReplay[256];
     char strEvent[256];
+	
+	char   strPtzToken[64];
     unsigned hasCoutinusPanTilt : 1;
     unsigned hasCoutinusZoom : 1;
     double ptXrangeMin;

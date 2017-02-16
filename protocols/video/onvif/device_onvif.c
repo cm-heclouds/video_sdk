@@ -27,7 +27,8 @@ int  ont_onvifdevice_getconfigurations(device_onvif_t *devicePtr)
     struct SOAP_ENV__Header header = { 0 };
     int result = 0;
 
-    tptz__GetConfigurationOptions.ConfigurationToken = "PTZToken";
+    ///tptz__GetConfigurationOptions.ConfigurationToken = "PTZToken";
+	tptz__GetConfigurationOptions.ConfigurationToken = devicePtr->strPtzToken;
     soap = soap_new();
 
     soap_set_namespaces(soap, namespaces);
@@ -143,9 +144,13 @@ int  ont_onvifdevice_getprofile(device_onvif_t *devicePtr)
 
                     if (trt__Response.Profiles[i].PTZConfiguration)
                     {
-                        if (trt__Response.Profiles[i].PTZConfiguration->DefaultContinuousPanTiltVelocitySpace)
-                        {
-                            devicePtr->hasCoutinusPanTilt = 1;
+						if (trt__Response.Profiles[i].PTZConfiguration->DefaultContinuousPanTiltVelocitySpace)
+						{
+							devicePtr->hasCoutinusPanTilt = 1;
+							if (!devicePtr->strPtzToken[0]) /*only set once*/
+							{
+								ont_platform_snprintf(devicePtr->strPtzToken, sizeof(devicePtr->strPtzToken), "%s", trt__Response.Profiles[i].PTZConfiguration->token);
+							}
                         }
                         if (trt__Response.Profiles[i].PTZConfiguration->DefaultContinuousZoomVelocitySpace)
                         {
