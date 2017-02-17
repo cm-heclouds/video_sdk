@@ -58,7 +58,7 @@ int ont_add_onvif_devices()
 	struct _onvif_channel * channels = cfg_get_channels();
 	for (i = 0; i < j; i++)
 	{
-		if (ont_onvifdevice_adddevice(channels[i].url, channels[i].user, channels[i].pass) != 0)
+		if (ont_onvifdevice_adddevice(channels[i].channelid, channels[i].url, channels[i].user, channels[i].pass) != 0)
 		{
 			ONT_LOG0(ONTLL_ERROR, "Failed to login the onvif server");
 		}
@@ -153,8 +153,8 @@ int main( int argc, char *argv[] )
 	int chnnum = 0;
     
 	//_test_live_stream_start();
-	//cfg_initilize("E:\\share\\video_sdk\\bin\\Debug\\config.json");
-	cfg_initilize("config.json");
+	cfg_initilize("E:\\share\\video_sdk\\bin\\Debug\\config.json");
+	//cfg_initilize("config.json");
 	int product_id = cfg_get_profile()->productid;
 
 
@@ -192,7 +192,9 @@ int main( int argc, char *argv[] )
         return -1;
     }
 
-	chnnum = ont_add_onvif_devices();
+	ont_add_onvif_devices();
+
+	chnnum = cfg_get_channel_num();
 	if ( !status_synced(chnnum))
 	{
 		ont_video_dev_set_channels(dev, chnnum);
@@ -208,7 +210,7 @@ int main( int argc, char *argv[] )
 		{
 			ont_platform_sleep(delta>100?100:delta);
 		}
-        err = ont_device_keepalive(dev);
+		err = ont_device_keepalive(dev);
         if (ONT_ERR_OK != err) 
         {
             ONT_LOG1(ONTLL_ERROR, "device is not alive, error=%d", err);

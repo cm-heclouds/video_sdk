@@ -193,7 +193,7 @@ int  ont_onvifdevice_capablity( const char *url, device_onvif_t *devicePtr)
     soap_wsse_add_Security(soap);
     soap_wsse_add_UsernameTokenDigest(soap, "Id", (const char*)devicePtr->strUser, (const char*)devicePtr->strPass);
 
-    soap->recv_timeout = 10;
+    soap->recv_timeout = 3;
 
     do 
     {
@@ -307,7 +307,7 @@ int  ont_onvifdevice_getplayurl(device_onvif_t *devicePtr, int profileindex)
     soap_default_SOAP_ENV__Header(soap, &header);
     soap_wsse_add_Security(soap);
     soap_wsse_add_UsernameTokenDigest(soap, "Id", (const char*)devicePtr->strUser, (const char*)devicePtr->strPass);
-    soap->recv_timeout = 10;
+    soap->recv_timeout = 5;
 
 
     do 
@@ -372,9 +372,9 @@ static struct soap* ont_onvif_initsoap(struct SOAP_ENV__Header *header, const ch
 	}
 	else
 	{
-		soap->recv_timeout = 10;
-		soap->send_timeout = 10;
-		soap->connect_timeout = 10;
+		soap->recv_timeout = 5;
+		soap->send_timeout = 5;
+		soap->connect_timeout = 5;
 	}
 	soap_default_SOAP_ENV__Header(soap, header);
 
@@ -479,7 +479,7 @@ int ont_onvif_device_discovery()
 	return retval;
 }
 
-int ont_onvifdevice_adddevice(const char *url, const char*user, const char *passwd)
+int ont_onvifdevice_adddevice(int channel, const char *url, const char*user, const char *passwd)
 {
 	device_onvif_t *devicePtr = NULL;
 	int i = 0;
@@ -515,6 +515,7 @@ int ont_onvifdevice_adddevice(const char *url, const char*user, const char *pass
 
     memcpy(devicePtr->strUser, user, strlen(user));
     memcpy(devicePtr->strPass, passwd, strlen(passwd));
+    devicePtr->channelid = channel;
 
     result = ont_onvifdevice_capablity(url, devicePtr);
     if (result < 0)
@@ -565,15 +566,19 @@ int ont_onvifdevice_adddevice(const char *url, const char*user, const char *pass
 
 }
 
-device_onvif_t* ont_getonvifdevice(int index)
+device_onvif_t* ont_getonvifdevice(int channelid)
 {
-    int i = index - 1;
-    if (_gOnvifDevice.number < index)
+    device_onvif_t *device =  NULL;
+    int i =0;
+    for (i =0; i<_gOnvifDevice.number; i++)
     {
-        return NULL;
+        if (_gOnvifDevice.list[i].channelid == channelid)
+        {
+            return &_gOnvifDevice.list[i];
+        }
     }
-
-    return &_gOnvifDevice.list[i];
+    printf("no this channel %d\n", channelid);     
+    return  NULL;
 }
 
 
@@ -651,7 +656,7 @@ static _ont_onvifdevice_stop(device_onvif_t *devicePtr)
 14: 方向右转 
 22:自动扫描, 不支持
 */
-int ont_onvifdevice_ptz(int index, int cmd, int _speed /* [1-7]*/, int status)
+int ont_onvifdevice_ptz(int channel, int cmd, int _speed /* [1-7]*/, int status)
 {
 
 	static struct soap *soap;
@@ -668,12 +673,12 @@ int ont_onvifdevice_ptz(int index, int cmd, int _speed /* [1-7]*/, int status)
 	struct _tptz__ContinuousMove tptz__ContinuousMove;
 	struct _tptz__ContinuousMoveResponse tptz__ContinuousMoveResponse;
 
-	if (index >= _gOnvifDevice.number)
-	{
-		printf("%s:%d, index out of range \n", __FILE__, __LINE__);
-		return -1;
-	}
-    devicePtr = &_gOnvifDevice.list[index];
+    devicePtr = ont_getonvifdevice(channel);
+    if (!devicePtr)
+    {
+        return -1;
+    }
+    
     if (!devicePtr->hasCoutinusPanTilt)
     {
         return -1;

@@ -83,7 +83,7 @@ int  cfg_initilize(const char * cfgpath)
 		user = cJSON_GetObjectItem(item, "user")->valuestring;
 		pass = cJSON_GetObjectItem(item, "passwd")->valuestring;
 
-		onvif_cfg.channels[i].channelid = i+1;
+		onvif_cfg.channels[i].channelid = cJSON_GetObjectItem(item, "channel_id")->valueint;
 		ont_platform_snprintf(onvif_cfg.channels[i].url, sizeof(onvif_cfg.channels[i].url), url);
 		ont_platform_snprintf(onvif_cfg.channels[i].user, sizeof(onvif_cfg.channels[i].user), user);
 		ont_platform_snprintf(onvif_cfg.channels[i].pass, sizeof(onvif_cfg.channels[i].pass), pass);

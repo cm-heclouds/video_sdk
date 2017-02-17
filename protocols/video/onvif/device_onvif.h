@@ -24,6 +24,7 @@ typedef struct
 
 typedef struct
 {
+    int  channelid; /*channel id*/
     char strUrl[256];
     char strUser[64];
     char strPass[64];
@@ -78,11 +79,11 @@ typedef struct
     int number;
 }device_onvif_list_t;
 
-int ont_onvifdevice_adddevice(const char *url, const char*user, const char *passwd);
+int ont_onvifdevice_adddevice(int channel, const char *url, const char*user, const char *passwd);
 
-int ont_onvifdevice_ptz(int index, int cmd, int speed, int status);
+int ont_onvifdevice_ptz(int channel, int cmd, int speed, int status);
 
-device_onvif_t* ont_getonvifdevice(int index);
+device_onvif_t* ont_getonvifdevice(int channel);
 
 char* ont_geturl_level(device_onvif_t *devicePtr, int level, RTMPMetadata *meta);
 

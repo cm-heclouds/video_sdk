@@ -9,14 +9,26 @@
 	
     "onvif": [
         {
-            "url": "http://192.168.217.75:80/onvif/device_service",
+            "channel_id":1,
+            "url": "http://192.168.1.114:80/onvif/device_service",
             "user": "admin",
-            "passwd": "test123456"
+            "passwd": "admin",
+            "defaultlevel": 1
+        },
+		
+        {
+            "channel_id":2,        
+            "url": "http://192.168.1.184:80/onvif/device_service",
+            "user": "admin",
+            "passwd": "admin",
+            "defaultlevel": 2
         },
         {
-            "url": "http://192.168.217.133:80/onvif/device_service",
+            "channel_id":3,            
+            "url": "http://192.168.1.185:80/onvif/device_service",
             "user": "admin",
-            "passwd": "test123456"
+            "passwd": "admin",
+             "defaultlevel": 1          
         }
     ],
 	

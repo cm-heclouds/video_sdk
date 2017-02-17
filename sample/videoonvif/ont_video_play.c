@@ -153,6 +153,7 @@ void ont_video_vod_stream_start(void *dev, int channel, t_ont_video_file *filein
 		struct _onvif_rvod * vod = cfg_get_rvod(channel, fileinfo->begin_time, fileinfo->end_time);
 		if (!vod)
 		{
+			ONT_LOG3(ONTLL_ERROR, "vod not found channel %d, begin %s, end %s ", channel, fileinfo->begin_time, fileinfo->end_time);
 			break;
 		}
 
@@ -196,7 +197,7 @@ void ont_video_stream_make_keyframe(void *dev, int channel)
 
 void ont_video_dev_ptz_ctrl(void *dev, int channel, int mode, t_ont_video_ptz_cmd cmd, int speed)
 {
-	ont_onvifdevice_ptz(channel - 1, cmd, speed, 2);
+	ont_onvifdevice_ptz(channel, cmd, speed, 2);
 }
 
 static int delta = 0;
