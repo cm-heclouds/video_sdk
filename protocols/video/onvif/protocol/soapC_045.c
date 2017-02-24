@@ -118,7 +118,7 @@ SOAP_FMAC3 int SOAP_FMAC4 soap_out_SOAP_ENV__Header(struct soap *soap, const cha
 		return soap->error;
 	if (soap_out_PointerTochan__ChannelInstanceType(soap, "chan:ChannelInstance", -1, &a->chan__ChannelInstance, ""))
 		return soap->error;
-	soap->mustUnderstand = 1;
+	soap->mustUnderstand = 0;
 	if (soap_out_PointerTo_wsse__Security(soap, "wsse:Security", -1, &a->wsse__Security, ""))
 		return soap->error;
 	return soap_element_end_out(soap, tag);

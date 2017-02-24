@@ -295,7 +295,7 @@ int  ont_onvifdevice_getplayurl(device_onvif_t *devicePtr, int profileindex)
     trt__GetStreamUri.StreamSetup->Stream = 0;//stream type  
 
     trt__GetStreamUri.StreamSetup->Transport = &tt__transport;
-    trt__GetStreamUri.StreamSetup->Transport->Protocol = 0;
+    trt__GetStreamUri.StreamSetup->Transport->Protocol = 2;
     trt__GetStreamUri.StreamSetup->Transport->Tunnel = 0;
 
     trt__GetStreamUri.ProfileToken = devicePtr->profiles[profileindex].strprofile;
