@@ -518,32 +518,32 @@ int ont_onvifdevice_adddevice(int channel, const char *url, const char*user, con
     devicePtr->channelid = channel;
 
     result = ont_onvifdevice_capablity(url, devicePtr);
-    if (result < 0)
+    if (result != SOAP_OK)
     {
-		printf("[error]:ont_onvifdevice_capablity fail for url=%s user=%s pass=%\n", devicePtr->strUrl, devicePtr->strUser, devicePtr->strPass);
+		printf("[error]:ont_onvifdevice_capablity fail for url=%s user=%s pass=%\n", url, devicePtr->strUser, devicePtr->strPass);
         return -1;
     }
     memcpy(devicePtr->strUrl, url, strlen(url));
     devicePtr->hasGetCap = 1;
 
     result = ont_onvifdevice_getprofile(devicePtr);
-    if (result < 0)
+    if (result != SOAP_OK)
     {
 		printf("[error]:ont_onvifdevice_getprofile fail for url=%s user=%s pass=%\n", devicePtr->strUrl, devicePtr->strUser, devicePtr->strPass);
         return -1;
     }
 
-	printf("[info]:url=%s has profiles-------------------------------------------------------:\n", devicePtr->strUrl);
+	ONT_LOG1(ONTLL_INFO, "[info]:url=%s has profiles-------------------------------------------------------:\n", devicePtr->strUrl);
     for (i = 0; i < 4; i++)
     {
         if (devicePtr->profiles[i].strprofile[0] != '\0')
         {
             result = ont_onvifdevice_getplayurl(devicePtr, i);
-            if (result < 0)
+            if (result != SOAP_OK)
             {
                 return -1;
             }
-			printf("profile [%d: level=%d bitrate=%d framterate=%d] \n", 
+			ONT_LOG4(ONTLL_INFO, "profile [%d: level=%d bitrate=%d framterate=%d] \n", 
 				i, 
 				devicePtr->profiles[i].level, 
 				devicePtr->profiles[i].bitrate, 
@@ -551,13 +551,13 @@ int ont_onvifdevice_adddevice(int channel, const char *url, const char*user, con
         }
     }
 
-    if (result < 0)
+    if (result != SOAP_OK)
     {
         return -1;
     }
 
     result = ont_onvifdevice_getconfigurations(devicePtr);
-    if (result < 0)
+    if (result != SOAP_OK)
     {
         return -1;
     }
@@ -577,7 +577,7 @@ device_onvif_t* ont_getonvifdevice(int channelid)
             return &_gOnvifDevice.list[i];
         }
     }
-    printf("no this channel %d\n", channelid);     
+    ONT_LOG1(ONTLL_INFO, "no this channel %d\n", channelid);     
     return  NULL;
 }
 
@@ -602,6 +602,7 @@ char* ont_geturl_level(device_onvif_t *devicePtr, int level, RTMPMetadata *meta)
             return devicePtr->profiles[i].strPlayurl;
         }
     }
+    printf("no this level %d\n", level);        
 	return NULL;
 }
 

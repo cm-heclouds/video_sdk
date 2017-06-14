@@ -421,7 +421,7 @@ static int ont_device_register(ont_device_t *dev,
     if (ONT_ERR_OK != err)
         return err;
 
-    ONT_LOG_DEBUG2("Connect to the server '%s:%u' successfully.",
+    ONT_LOG2(ONTLL_INFO, "Connect to the server '%s:%u' successfully.",
                    dev->ip, dev->port);
 
     head_min_len = strlen(http_req_head) - 3 * 2;
@@ -704,7 +704,7 @@ int ont_device_connect(ont_device_t *dev,
     if (0 == dev->device_id)
     {
         ont_device_status_transform(dev, ONTDEV_STATUS_REGISTERING);
-        ONT_LOG_DEBUG0("Begin to register the device ...");
+        ONT_LOG0(ONTLL_INFO, "Begin to register the device ...");
         err = ont_device_register(dev, reg_code, auth_info, rt);
         if (ONT_ERR_OK != err)
             return err;
@@ -713,8 +713,7 @@ int ont_device_connect(ont_device_t *dev,
         if (ONT_ERR_OK != err)
             return err;
 
-        ONT_LOG_DEBUG2("Register the device successfully, device id is %u, key is '%s'.",
-                       dev->device_id, dev->key);
+        ONT_LOG2(ONTLL_INFO, "Register the device successfully, device id is %u, key is '%s'.", dev->device_id, dev->key);
     }
 
     ont_device_status_transform(dev, ONTDEV_STATUS_RETRIEVING_ACCEPTOR);

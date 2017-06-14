@@ -339,14 +339,15 @@ void MP4GetH264SpsPPs(MP4FileHandle mp4File, MP4TrackId trackId, char **Sps, uns
 
 void  rtmp_rvod_seek_notify(void* ctx, double ts)
 {
-    /*seek to the speciafiled type*/
+    /*seek to the specified type*/
     RTMP_LogPrintf("rtmp seekd offset %lf\n", ts);
     if (!ctx)
     {
         return;
     }
     t_rtmp_vod_ctx *c = ctx;
-    c->seeked = 1;
+    c->seeked[0] = 1;
+    c->seeked[1] = 1;
     c->start_timestamp = ts;
     c->epoch = RTMP_GetTime();
     c->last_videotimestamp = 0;
@@ -496,10 +497,13 @@ int rtmp_rvod_send_media_singlestep(t_rtmp_vod_ctx* ctx)
     unsigned int buf_size = 0;
     MP4Timestamp cur_frame_time = 0;
     unsigned int isKeyFram = 0;
-    unsigned int delta_time = 0;
+    unsigned int delta_time_video = 0;
+    unsigned int delta_time_audio = 0;
     unsigned char *video_buf = ctx->video_buf;
     unsigned char *audio_buf = ctx->audio_buf;
-
+    const static int send_max_frames =4;
+    int counter =0 ;
+    
     if (video_buf == NULL)
     {
 		video_buf = ctx->video_buf = (unsigned char *)ont_platform_malloc(ctx->videosamplemaxsize + 5);
@@ -515,83 +519,107 @@ int rtmp_rvod_send_media_singlestep(t_rtmp_vod_ctx* ctx)
         return -2;
     }
 
-	rtmp_check_rcv_handler(ctx->rtmp);
+
+    end_timestamp = ctx->start_timestamp + (RTMP_GetTime() - ctx->epoch) + M_RTMP_CLIENTBUFLEN;
+
     if(RTMP_IsConnected(rtmp))
     {
+        rtmp_check_rcv_handler(ctx->rtmp);
+        
 		if (ctx->paused)
 		{
 			return 0;
 		}
-        end_timestamp = ctx->start_timestamp + (RTMP_GetTime() - ctx->epoch) + M_RTMP_CLIENTBUFLEN;
-
-        /*send aac speicial config fisrt*/
-        if (ctx->seeked || ctx->next_audiosampleid == 1)
+        if (ctx->last_videotimestamp > end_timestamp)
         {
-            /*specialConfig*/
-            unsigned char audio_data[3];
-            audio_data[0] = 0x00;
-            audio_data[1] = ctx->audiocfg[0];
-            audio_data[2] = ctx->audiocfg[1];
-            rtmp_send_audiodata(rtmp, ctx->audioHeaderTag, audio_data, 3, 0, RTMP_PACKET_SIZE_LARGE);
+            delta_time_video = ctx->last_videotimestamp - end_timestamp;
         }
-        /*send video*/
-        for (;;)
+        else
         {
-            if (ctx->last_videotimestamp > end_timestamp)
+            counter = 0;
+            /*send video*/
+            for (;;)
             {
-                delta_time = ctx->last_videotimestamp - end_timestamp;
-                break;
-            }
+                if (counter>send_max_frames)
+                {
+                    break;
+                }
+				counter++;
+                buf_size = ctx->videosamplemaxsize + 5;
 
-            buf_size = ctx->videosamplemaxsize + 5;
+                if (Mp4GetVideoTag(ctx, video_buf, &buf_size, &isKeyFram, &cur_frame_time, NULL, ctx->next_videosampleid) < 0)
+                {
+                    /*need send stream eof*/
+                    break;
+                }
 
-            if (Mp4GetVideoTag(ctx, video_buf, &buf_size, &isKeyFram, &cur_frame_time, NULL, ctx->next_videosampleid) < 0)
-            {
-                /*need send stream eof*/
-                break;
-            }
+                cur_frame_time = MP4ConvertFromTrackTimestamp(ctx->fileHanle, ctx->videoTrackId, cur_frame_time, MP4_MSECS_TIME_SCALE);
+                if (ctx->seeked[0])
+    			{
+                    ctx->seeked[0] = 0;
+                    rtmp_send_spspps(rtmp, ctx->sps, ctx->spsLen, ctx->pps, ctx->ppsLen, cur_frame_time);
+                    
+                }
+                else
+                {
+                    if (isKeyFram)
+                    {
+                       rtmp_send_spspps(rtmp, ctx->sps, ctx->spsLen, ctx->pps, ctx->ppsLen, 0);
+                    }
+                }
+             
+                rtmp_send_videodata(rtmp, video_buf, buf_size, cur_frame_time, isKeyFram);
+                ctx->next_videosampleid++;
+                ctx->last_videotimestamp = cur_frame_time;
 
-            cur_frame_time = MP4ConvertFromTrackTimestamp(ctx->fileHanle, ctx->videoTrackId, cur_frame_time, MP4_MSECS_TIME_SCALE);
-            int ts = 0;
-            if (ctx->seeked)
-            {
-                ts = cur_frame_time;
-                ctx->seeked = 0;
             }
-            else
-            {
-                ts = 0;
-            }
-            /*send sps pps*/
-            if (isKeyFram)
-            {
-                rtmp_send_spspps(rtmp, ctx->sps, ctx->spsLen, ctx->pps, ctx->ppsLen, ts);
-            }
-
-            rtmp_send_videodata(rtmp, video_buf, buf_size, cur_frame_time, isKeyFram);
-            ctx->next_videosampleid++;
-            ctx->last_videotimestamp = cur_frame_time;
-
         }
-
-        /*send audio*/
-        for (;;)
+        
+        if (ctx->last_audiotimestamp > end_timestamp)
         {
-            if (ctx->last_audiotimestamp > end_timestamp)
+            delta_time_audio= ctx->last_audiotimestamp - end_timestamp;
+        }  
+        else
+        {
+            counter = 0;
+            /*send audio*/
+            for (;;)
             {
-                /*send over.*/
-                break;
+                
+                if (counter>send_max_frames)
+                {
+                    /*send over.*/
+                    break;
+                }
+				counter++;
+            
+                buf_size = ctx->audiosamplemaxsize + 1;
+                if (Mp4GetAudioData(ctx, audio_buf, &buf_size, &cur_frame_time, NULL, ctx->next_audiosampleid) < 0)
+                {
+                    /*need send stream eof*/
+                    break;
+                }
+                /*send aac speicial config first*/
+                if (ctx->seeked[1] || ctx->next_audiosampleid == 1)
+                {
+                    if (ctx->seeked[1])
+                    {
+                        ctx->seeked[1] = 0;
+                    }
+                    /*specialConfig*/
+                    unsigned char audio_data[3];
+                    audio_data[0] = 0x00;
+                    audio_data[1] = ctx->audiocfg[0];
+                    audio_data[2] = ctx->audiocfg[1];
+                    
+                    rtmp_send_audiodata(rtmp, ctx->audioHeaderTag, audio_data, 3, 0, RTMP_PACKET_SIZE_LARGE);
+                }
+
+    			cur_frame_time = MP4ConvertFromTrackTimestamp(ctx->fileHanle, ctx->audioTrackId, cur_frame_time, MP4_MSECS_TIME_SCALE);
+                rtmp_send_audiodata(rtmp, ctx->audioHeaderTag, audio_buf, buf_size, cur_frame_time, RTMP_PACKET_SIZE_MEDIUM);
+                ctx->next_audiosampleid++;
+                ctx->last_audiotimestamp = cur_frame_time;
             }
-            buf_size = ctx->audiosamplemaxsize + 1;
-            if (Mp4GetAudioData(ctx, audio_buf, &buf_size, &cur_frame_time, NULL, ctx->next_audiosampleid) < 0)
-            {
-                /*need send stream eof*/
-                break;
-            }
-            cur_frame_time = MP4ConvertFromTrackTimestamp(ctx->fileHanle, ctx->audioTrackId, cur_frame_time, MP4_MSECS_TIME_SCALE);
-            rtmp_send_audiodata(rtmp, ctx->audioHeaderTag, audio_buf, buf_size, cur_frame_time, cur_frame_time == 0 ? RTMP_PACKET_SIZE_LARGE:RTMP_PACKET_SIZE_MEDIUM);
-            ctx->next_audiosampleid++;
-            ctx->last_audiotimestamp = cur_frame_time;
         }
         /* check if both video and audio send finished*/
         if (ctx->next_audiosampleid >= ctx->audioSamples && ctx->next_videosampleid >= ctx->videoSamples)
@@ -600,7 +628,8 @@ int rtmp_rvod_send_media_singlestep(t_rtmp_vod_ctx* ctx)
 			rtmp_rvod_send_videoeof(ctx);
             return -2;
         }
-        return delta_time;
+        
+        return delta_time_audio<delta_time_video?delta_time_audio:delta_time_video;
     }
     else
     {

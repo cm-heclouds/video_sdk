@@ -10,6 +10,31 @@
 #include "ont_onvif_if.h"
 #include "device_onvif.h"
 #include "sample_config.h"
+#ifdef WIN32
+#include <winsock.h>
+#include <windows.h>
+int
+gettimeofday(struct timeval *tp, void *tzp)
+{
+    time_t clock;
+    struct tm tm;
+    SYSTEMTIME wtm;
+    GetLocalTime(&wtm);
+    tm.tm_year     = wtm.wYear - 1900;
+    tm.tm_mon     = wtm.wMonth - 1;
+    tm.tm_mday     = wtm.wDay;
+    tm.tm_hour     = wtm.wHour;
+    tm.tm_min     = wtm.wMinute;
+    tm.tm_sec     = wtm.wSecond;
+    tm.tm_isdst    = -1;
+    clock = mktime(&tm);
+    tp->tv_sec = clock;
+    tp->tv_usec = wtm.wMilliseconds * 1000;
+    return (0);
+}
+#else
+#include <sys/time.h>
+#endif
 typedef  struct
 {
 	char playflag[32];
@@ -33,10 +58,13 @@ static void *play_env = NULL;
 
 static int ont_video_live_stream_start_level(void *dev, int channel, const char *push_url, const char* deviceid, int level)
 {
-	void *ctx = NULL;
+	ont_onvif_playctx *ctx = NULL;
 	t_playlist *data = NULL;
 	t_playlist data2 = { 0 };
 	ont_list_node_t *node;
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    unsigned long ts = (tv.tv_usec / 1000 + tv.tv_sec * 1000);
 	VARAIBLE_CHECK;
 
 	data2.channel = channel;
@@ -60,6 +88,7 @@ static int ont_video_live_stream_start_level(void *dev, int channel, const char 
 		data->rvod = 0;
 		data->playctx = ctx;
 		data->channel = channel;
+        ctx->last_sndts = ts;
 		ont_platform_snprintf(data->publishurl, sizeof(data->publishurl), "%s", push_url);
 		ont_platform_snprintf(data->deviceid, sizeof(data->deviceid), "%s", deviceid);
 		ont_list_insert(g_list, data);
@@ -73,7 +102,7 @@ void ont_video_live_stream_start(void *dev, int channel, const char *push_url, c
 {
 	/* try the 4 streams.*/
 	int level = 4;
-	do 
+	do
 	{
 		if (ont_video_live_stream_start_level(dev, channel, push_url, deviceid, level) >=0)
 		{
@@ -139,7 +168,7 @@ void ont_video_vod_stream_start(void *dev, int channel, t_ont_video_file *filein
 	t_playlist *data = NULL;
 	if (node)
 	{
-        ONT_LOG1(ONTLL_INFO, "vod already start %s ", playflag);        
+        ONT_LOG1(ONTLL_INFO, "vod already start %s ", playflag);
 		return;
 	}
 	data = ont_platform_malloc(sizeof(t_playlist));
@@ -148,7 +177,7 @@ void ont_video_vod_stream_start(void *dev, int channel, t_ont_video_file *filein
 	data->rvod = 1;
     t_rtmp_vod_ctx *ctx = rtmp_rvod_createctx();
 
-	do 
+	do
 	{
 		struct _onvif_rvod * vod = cfg_get_rvod(channel, fileinfo->begin_time, fileinfo->end_time);
 		if (!vod)
@@ -231,16 +260,26 @@ void vodsinglestep(void *data, void *context)
 
 int _checkcloseFlag(t_playlist *d1, t_playlist *d2)
 {
-	ont_onvif_playctx *ctx = d1->playctx;
+	struct timeval tv;
+	ont_onvif_playctx *playctx = d1->playctx;
+    gettimeofday(&tv, NULL);
+    unsigned long ts = (tv.tv_usec / 1000 + tv.tv_sec * 1000);
+
 	if (d1->rvod && d1->closeflag == 1)
 	{
 		return 0;
 	}
-	if (!d1->rvod && ctx->state)
+	if (!d1->rvod && playctx->state)
 	{
 		return 0; /*need closed*/
 	}
-	
+
+	if (!d1->rvod && playctx->last_sndts>0 && ts>playctx->last_sndts && ts - playctx->last_sndts >5000)
+    {
+        ONT_LOG2(ONTLL_INFO, "live end, ts %lu, last %lu", ts, playctx->last_sndts);
+        return 0;
+    }
+
 	return -1;
 }
 
@@ -272,7 +311,7 @@ static int _checkneedclose(void *dev)
 		finddata->closeflag = 0;
 		ont_list_remove(g_list, node, NULL);
 		ont_platform_free(finddata);
-	} while (1); 
+	} while (1);
 	return 0;
 }
 

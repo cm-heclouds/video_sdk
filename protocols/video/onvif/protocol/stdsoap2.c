@@ -3935,7 +3935,7 @@ ssl_auth_init(struct soap *soap)
   { int err;
     err = gsk_environment_open(&soap->ctx);
     if (err == GSK_OK)
-      err = gsk_attribute_set_enum(soap->ctx, GSK_PROTOCOL_SSLV2, GSK_PROTOCOL_SSLV2_OFF); 
+      err = gsk_attribute_set_enum(soap->ctx, GSK_PROTOCOL_SSLV2, GSK_PROTOCOL_SSLV2_OFF);
     if (err == GSK_OK)
     { if ((soap->ssl_flags & SOAP_SSLv3) || (soap->ssl_flags & SOAP_SSLv3_TLSv1))
         err = gsk_attribute_set_enum(soap->ctx, GSK_PROTOCOL_SSLV3, GSK_PROTOCOL_SSLV3_ON);
@@ -3948,7 +3948,7 @@ ssl_auth_init(struct soap *soap)
       if (err == GSK_OK)
         err = gsk_attribute_set_enum(soap->ctx, GSK_PROTOCOL_TLSV1_1, GSK_PROTOCOL_TLSV1_1_ON);
       if (err == GSK_OK)
-        err = gsk_attribute_set_enum(soap->ctx, GSK_PROTOCOL_TLSV1_2, GSK_PROTOCOL_TLSV1_2_ON); 
+        err = gsk_attribute_set_enum(soap->ctx, GSK_PROTOCOL_TLSV1_2, GSK_PROTOCOL_TLSV1_2_ON);
     }
     else
     { if (err == GSK_OK)
@@ -3956,7 +3956,7 @@ ssl_auth_init(struct soap *soap)
       if (err == GSK_OK)
         err = gsk_attribute_set_enum(soap->ctx, GSK_PROTOCOL_TLSV1_1, GSK_PROTOCOL_TLSV1_1_OFF);
       if (err == GSK_OK)
-        err = gsk_attribute_set_enum(soap->ctx, GSK_PROTOCOL_TLSV1_2, GSK_PROTOCOL_TLSV1_2_OFF); 
+        err = gsk_attribute_set_enum(soap->ctx, GSK_PROTOCOL_TLSV1_2, GSK_PROTOCOL_TLSV1_2_OFF);
     }
     if (err == GSK_OK)
       err = gsk_attribute_set_buffer(soap->ctx, GSK_KEYRING_FILE, soap->keyfile, 0); /* keyfile is a keyring .kdb file */
@@ -4472,7 +4472,7 @@ tcp_connect(struct soap *soap, const char *endpoint, const char *host, int port)
 #endif
       }
 #endif
-      soap->errmode = 0; 
+      soap->errmode = 0;
       return soap->socket;
     }
     soap->fclosesocket(soap, soap->socket);
@@ -4516,8 +4516,13 @@ again:
 again:
 #endif
 #ifndef WITH_LEAN
-  if ((soap->omode & SOAP_IO_UDP))
-    sk = socket(AF_INET, SOCK_DGRAM, 0);
+  if ((soap->omode & SOAP_IO_UDP)) {
+    if (soap->user == NULL) {
+      sk = socket(AF_INET, SOCK_DGRAM, 0);
+    } else {
+      sk = soap_bind(soap, (char*)soap->user, 0, 0);
+    }
+  }
   else
 #endif
     sk = socket(AF_INET, SOCK_STREAM, 0);
@@ -6144,7 +6149,7 @@ soap_done(struct soap *soap)
   if (soap->state == SOAP_INIT)
     if (soap->ctx)
       gsk_environment_close(&soap->ctx);
-#endif  
+#endif
 #ifdef WITH_C_LOCALE
   if (soap->c_locale)
   {
@@ -6671,13 +6676,13 @@ http_post(struct soap *soap, const char *endpoint, const char *host, int port, c
   int err;
   size_t l;
   switch (soap->status)
-  { case SOAP_GET: 
+  { case SOAP_GET:
       s = "GET";
       break;
-    case SOAP_PUT: 
+    case SOAP_PUT:
       s = "PUT";
       break;
-    case SOAP_DEL: 
+    case SOAP_DEL:
       s = "DELETE";
       break;
     case SOAP_CONNECT:
@@ -14848,7 +14853,7 @@ soap_QName(struct soap *soap, const char *s, long minlen, long maxlen, const cha
               m = k;
             }
             else
-            { flag = 1; 
+            { flag = 1;
               r = soap->local_namespaces[np->index].ns;
               m = strlen(r);
             }
@@ -17950,7 +17955,7 @@ soap_ntlm_handshake(struct soap *soap, int command, const char *endpoint, const 
   const char *passwd = (soap->proxy_passwd ? soap->proxy_passwd : soap->passwd);
   struct SOAP_ENV__Header *oldheader;
   if (soap->ntlm_challenge && userid && passwd && soap->authrealm)
-  { tSmbNtlmAuthRequest req;  
+  { tSmbNtlmAuthRequest req;
     tSmbNtlmAuthResponse res;
     tSmbNtlmAuthChallenge ch;
     short k = soap->keep_alive;

@@ -331,7 +331,7 @@ int ont_is_complete_packet(const char *buf,
 	}
 	else
 	{
-		ONT_LOG0(ONTLL_ERROR,"buf does not contain one complete packet\n");
+		ONT_LOG2(ONTLL_ERROR,"buf does not contain one complete packet,buf %d, remain %d \n", buf_size, *remain_length);
 	}
 	return NOT_COMPLETE_PACKET;
 }

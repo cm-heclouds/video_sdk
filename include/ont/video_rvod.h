@@ -56,7 +56,7 @@ typedef struct _t_rtmp_vod_ctx
     unsigned int audioconfigLen;
 
     unsigned int paused;
-    unsigned int seeked;
+    unsigned int seeked[2]; /*0 video, 1 audio*/
     unsigned int stopeed;
     
     unsigned int start_timestamp;
