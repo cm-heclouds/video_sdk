@@ -10,6 +10,7 @@ ${CMAKE_CURRENT_SOURCE_DIR}
 ${CMAKE_CURRENT_SOURCE_DIR}/protocol
 ${CMAKE_CURRENT_SOURCE_DIR}/openssl-1.0.1g/include
 ${ONT_SDK_ROOT}/protocols/video/ont
+${ONT_SDK_ROOT}/include/ont
 ${ONT_SDK_ROOT}/protocols/video/live/BasicUsageEnvironment/include
 ${ONT_SDK_ROOT}/protocols/video/live/groupsock/include
 ${ONT_SDK_ROOT}/protocols/video/live/liveMedia/include

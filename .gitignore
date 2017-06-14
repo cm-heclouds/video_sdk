@@ -1,0 +1,5 @@
+include/ont/config.h
+bin/*
+lib/*
+linuxbuild/*
+winbuild/*

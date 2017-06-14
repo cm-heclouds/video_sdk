@@ -3,6 +3,8 @@
 #include "soapH.h"
 #include "device_onvif.h"
 #include "wsseapi.h"
+#include "log.h"
+
 
 
 #define DEBUG 1
