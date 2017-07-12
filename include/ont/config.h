@@ -13,7 +13,7 @@
  *
  * socket通信时， 接收缓冲区的最大字节数
  */
-#define ONT_SOCK_RECV_BUF_SIZE    1024
+#define ONT_SOCK_RECV_BUF_SIZE    2048
 
 /**
  * @def ONT_SSERVER_ADDRESS

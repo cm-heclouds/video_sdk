@@ -3,7 +3,7 @@
 #include "ont_base_common.h"
 #include "ont_channel.h"
 #include "ont/log.h"
-
+#include "ont/edp.h"
 
 #ifdef ONT_PROTOCOL_EDP
 
@@ -265,7 +265,13 @@ int ont_edp_cb_recv_packet(void* ctx, const char* buf, size_t buf_size, size_t *
        ONT_LOG0(ONTLL_INFO, "recv cmd!");
         device->result = ont_edp_handle_get_cmd(data + data_start_pos, remain_len, device);
         device->resp_status = EDP_RESP_CONTINUE;
-        return 1;/*continue recv*/
+        return 0;/*continue recv*/
+    case EDP_TRANS_DATA:
+	ONT_LOG1(ONTLL_INFO, "recv transdata! %d",remain_len);
+	device->result = ont_edp_handle_get_transdata(data + data_start_pos, (size_t)remain_len, device);
+        device->resp_status = EDP_RESP_CONTINUE;
+        return 0;/*continue recv*/
+	break;
     default:
         break;
     }
@@ -328,7 +334,11 @@ int ont_edp_keepalive(ont_device_t *dev)
     int retcode = 0;
     if (device->connect_status == DEVICE_NOT_CONNECTED)
         return ONT_ERR_SOCKET_OP_FAIL;
-
+    do
+    {
+	retcode = device->channel.fn_process(device->channel.channel);
+	ont_platform_sleep(50);
+    } while (retcode == 0 && device->resp_status == EDP_RESP_CONTINUE);
     if (ont_platform_time() - device->last_keep_alive_time < device->info.keepalive/3)
         return ONT_ERR_OK;
 
@@ -341,7 +351,6 @@ int ont_edp_keepalive(ont_device_t *dev)
         retcode = device->channel.fn_process(device->channel.channel);
         ont_platform_sleep(10);
     } while (retcode == 0 && device->resp_status == EDP_RESP_CONTINUE);
-
     if(retcode)
         device->result = retcode;
 
@@ -377,10 +386,8 @@ int  ont_edp_send_datapoints(
         retcode = device->channel.fn_process(device->channel.channel);
         ont_platform_sleep(50);
     } while (retcode == 0 && device->resp_status == EDP_RESP_CONTINUE);
-
     if(retcode)
         device->result = retcode;
-
     device->msg_id++;
     if (device->msg_id > 65535)
         device->msg_id = 1;
@@ -389,5 +396,40 @@ int  ont_edp_send_datapoints(
 
     return retcode;
 }
+void ont_edp_set_transdata_cb(ont_device_t* dev,ont_edp_get_transdata_cb cb)
+{
+    CAST_TYPE(ont_edp_device_t*, dev, device);
+    device->transdata_cb = cb;
+}
+int ont_edp_send_transdata(ont_device_t* dev,const char* svr_name,const char* data,size_t data_len)
+{
+    CAST_TYPE(ont_edp_device_t*, dev, device);
+    int retcode = 0;
 
+    if (svr_name == NULL || dev == NULL || data == NULL || data_len == 0)
+        return ONT_ERR_BADPARAM;
+
+    retcode = ont_edp_handle_send_trans_data(device,svr_name, data, data_len);
+    CHECK_RESULT(retcode, retcode);
+    retcode = device->channel.fn_write(device->channel.channel, 
+        device->formatter->result.data,
+        device->formatter->result.len);
+    ont_pkt_formatter_reset(device->formatter, 0);
+
+    CHECK_RESULT(retcode, retcode);
+
+    device->resp_status = EDP_RESP_CONTINUE;
+    do
+    {
+        retcode = device->channel.fn_process(device->channel.channel);
+        ont_platform_sleep(50);
+/*    } while (retcode == 0 && device->resp_status == EDP_RESP_CONTINUE);*/
+    }while(0);
+    if(retcode)
+        device->result = retcode;
+    device->last_keep_alive_time = ont_platform_time();
+
+    return retcode;
+
+}
 #endif

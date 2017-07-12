@@ -404,23 +404,22 @@ static int ont_device_register(ont_device_t *dev,
             "\"title\":\"%s\""
         "}";
 
-
     err = ont_tcp_channel_create(channel, dev->ip, dev->port,
                                  ONT_SOCK_RECV_BUF_SIZE,
                                  ONT_SOCK_SEND_BUF_SIZE,
                                  dev, HTTP_TIMEOUT);
     if (ONT_ERR_OK != err)
         return err;
-
     err = channel->fn_initilize(channel->channel,
                                 ont_device_handle_http_response);
     if (ONT_ERR_OK != err)
         return err;
 
     err = channel->fn_connect(channel->channel, &dev->exit);
-    if (ONT_ERR_OK != err)
+    if (ONT_ERR_OK != err){
+	channel->fn_deinitilize(channel->channel);
         return err;
-
+    }
     ONT_LOG2(ONTLL_INFO, "Connect to the server '%s:%u' successfully.",
                    dev->ip, dev->port);
 
@@ -443,7 +442,7 @@ static int ont_device_register(ont_device_t *dev,
     head_len = strlen(http_req);
     ont_platform_snprintf(http_req + head_len, buf_size - head_len ,
                           body, auth_info, dev->name);
-
+    ONT_LOG1(ONTLL_INFO,"%s",http_req);
     err = channel->fn_write(channel->channel, http_req, strlen(http_req));
     ont_platform_free(http_req);
     if (ONT_ERR_OK != err)
@@ -494,6 +493,68 @@ static int ont_device_retrieve_server(ont_device_t *dev,
                                      ONT_SOCK_SEND_BUF_SIZE,
                                      dev, HTTP_TIMEOUT);
         
+        if (ONT_ERR_OK != err)
+            break;
+
+        err = channel->fn_initilize(channel->channel,
+                                    ont_device_handle_http_response);
+        if (ONT_ERR_OK != err)
+            break;
+        err = channel->fn_connect(channel->channel, &dev->exit);
+        if (ONT_ERR_OK != err)
+            break;
+
+        err = channel->fn_write(channel->channel, http_req, strlen(http_req));
+        if (ONT_ERR_OK != err)
+            break;
+
+        while (1)
+        {
+            err = channel->fn_process(channel->channel);
+            if (ONT_ERR_OK != err)
+                break;
+
+            if (ONTDEV_STATUS_RETRIEVED_ACCEPTOR == dev->status)
+                break;
+
+            ont_platform_sleep(30);
+        }
+    }while(0);
+    ont_platform_free(http_req);
+    channel->fn_deinitilize(channel->channel);
+
+    return err;
+}
+static int ont_device_retrieve_server_ex(ont_device_t *dev,
+                                      const char *server,
+                                      uint16_t port,
+				      const char *version)
+{
+    char *http_req;
+    size_t len;
+    int err;
+    ont_channel_interface_t channel[1];
+    const char *http_req_head =
+        "GET /s?t=%d&v=%s HTTP/1.1\r\n"
+        "Host: %s\r\n"
+        "Connection: close\r\n"
+        "\r\n";
+
+
+    /* 4 bytes for "%d" "%s" and 2 bytes for type. */
+    len = strlen(http_req_head) - 4 + strlen(server) + strlen(version) + 2;
+    http_req = (char*)ont_platform_malloc(len + 1);
+    if (!http_req)
+        return ONT_ERR_NOMEM;
+    ont_platform_snprintf(http_req, len + 1, http_req_head, dev->type,version,server);
+    /* ONT_LOG1(ONTLL_INFO,"%s",http_req);*/ 
+    do
+    {
+        err = ont_tcp_channel_create(channel, dev->ip, dev->port,
+                                     ONT_SOCK_RECV_BUF_SIZE,
+                                     ONT_SOCK_SEND_BUF_SIZE,
+                                     dev, HTTP_TIMEOUT);
+
         if (ONT_ERR_OK != err)
             break;
 
@@ -700,7 +761,6 @@ int ont_device_connect(ont_device_t *dev,
 
     rt = ont_device_get_rt(dev->type);
     dev->exit = 0;
-
     if (0 == dev->device_id)
     {
         ont_device_status_transform(dev, ONTDEV_STATUS_REGISTERING);
@@ -715,12 +775,71 @@ int ont_device_connect(ont_device_t *dev,
 
         ONT_LOG2(ONTLL_INFO, "Register the device successfully, device id is %u, key is '%s'.", dev->device_id, dev->key);
     }
+    ont_device_status_transform(dev, ONTDEV_STATUS_RETRIEVING_ACCEPTOR);
+#if 0
+    err = ont_device_retrieve_server(dev, ip, port);
+    ONT_LOG_DEBUG2("Retrieve the accceptor address successfully: %s:%u",
+	    dev->ip, dev->port);
+#endif
+    if (ONT_ERR_OK == err)
+    {
+	err = rt->connect(dev,auth_info);
+	if (ONT_ERR_OK == err)
+	    ont_device_status_transform(dev, ONTDEV_STATUS_CONNECTED);
+    }
+
+    return err;
+}
+int ont_device_connect_ex(ont_device_t *dev,
+                       const char *ip,
+                       uint16_t port,
+		       const char *version,
+                       const char *reg_code,
+                       const char *auth_info,
+                       uint16_t keepalive)
+{
+    int err;
+    const ont_device_rt_t *rt;
+    if (!dev || !ip || !reg_code || !auth_info)
+        return ONT_ERR_BADPARAM;
+    
+    ont_platform_snprintf(dev->ip, sizeof(dev->ip), "%s", ip);
+    dev->port = port;
+    dev->keepalive = keepalive;
+
+    err = ont_device_load_status(dev);
+    if (ONT_ERR_OK != err)
+        return err;
+
+    ONT_LOG_DEBUG2("Product id is %u, Device id is %u.",
+                   dev->product_id,
+                   dev->device_id);
+
+    rt = ont_device_get_rt(dev->type);
+    dev->exit = 0;
+
+    if (0 == dev->device_id)
+    {
+        ont_device_status_transform(dev, ONTDEV_STATUS_REGISTERING);
+	ONT_LOG0(ONTLL_INFO, "Begin to register the device ...");
+
+	err = ont_device_register(dev, reg_code, auth_info, rt);
+	if (ONT_ERR_OK != err)
+	    return err;
+
+	err = ont_device_save_status(dev);
+        if (ONT_ERR_OK != err)
+            return err;
+
+        ONT_LOG2(ONTLL_INFO, "Register the device successfully, device id is %u, key is '%s'.", dev->device_id, dev->key);
+    }
 
     ont_device_status_transform(dev, ONTDEV_STATUS_RETRIEVING_ACCEPTOR);
-   // err = ont_device_retrieve_server(dev, ip, port);
-    //ONT_LOG_DEBUG2("Retrieve the accceptor address successfully: %s:%u",
-    //               dev->ip, dev->port);
-
+#if 1
+    err= ont_device_retrieve_server_ex(dev, ip, port,version);
+    ONT_LOG_DEBUG2("Retrieve the accceptor address successfully: %s:%u",
+                   dev->ip, dev->port);
+#endif
     if (ONT_ERR_OK == err)
     {
         err = rt->connect(dev,auth_info);

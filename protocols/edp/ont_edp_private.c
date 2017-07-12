@@ -57,6 +57,11 @@ ont_parser_init_begin(edp_cmd_t, cmd_id, bytes)
 ont_parser_queue_up(bin, binary, NULL, none)
 ont_parser_init_end()
 
+/*cmd trans data req && resp packet*/
+ont_parser_init_begin(edp_trans_data_t, svr_name, bytes)
+ont_parser_queue_up(data, raw, NULL, none)
+ont_parser_init_end()
+
 
 
 int ont_edp_handle_connect(ont_edp_device_t* device, const char* auth_info){
@@ -190,6 +195,47 @@ int ont_edp_handle_send_dp(ont_edp_device_t* device,
 
     ont_platform_free(pkt);
     return 0;
+}
+int ont_edp_handle_send_trans_data(ont_edp_device_t* device,const char* svr_name,
+	const char* data, size_t data_len)
+{
+    edp_trans_data_t* pkt = (edp_trans_data_t*)ont_platform_malloc(sizeof(edp_trans_data_t));
+    if (NULL == pkt)
+        return -1;
+
+    ont_parser_init_edp_trans_data_t(pkt);
+    pkt->svr_name.len = strlen(svr_name);
+    pkt->svr_name.value = svr_name;
+    pkt->data.len = data_len;
+    pkt->data.value = data;
+
+    ONT_EDP_SERIALIZE_FINISH(EDP_TRANS_DATA);
+
+    ont_platform_free(pkt);
+    return 0;
+
+}
+int ont_edp_handle_get_transdata(const unsigned char* data,size_t len,ont_edp_device_t* device)
+{
+    int i=0;
+    edp_trans_data_t pkt;
+    ont_parser_init_edp_trans_data_t(&pkt);
+    
+    pkt.data.len = len - ( *data << 8 | *(data+1)) - sizeof(uint16_t);
+    if (ont_parser_deserialize((const char *)data,(uint32_t) len, &pkt.head, 0))
+    {
+	return -1;
+    }
+    if(device->transdata_cb == NULL)
+    {
+	return -1;
+    }
+
+    device->transdata_cb(pkt.svr_name.value,pkt.svr_name.len,
+	    pkt.data.value,pkt.data.len);
+    return 0;
+    
+
 }
 
 #endif

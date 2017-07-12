@@ -33,6 +33,18 @@ int ont_mqtt_unsub_topic(ont_device_t *device,
 							 size_t size);
 
 /**
+ * 订阅topic
+ * @param device 创建的mqtt设备的指针
+ * @param topic_arry 订阅的topic的二维字符串数组的起始地址(用于订阅多个topic)
+ * @param size 订阅的topic的总个数(即二维数据的第一维长度)
+ * @return 成功则返回ONT_ERR_OK
+ */
+int ont_mqtt_set_publish_cb(ont_device_t *device,
+						   const char *topic_name,
+						   const char *payload,
+						   size_t payload_size);
+
+/**
  * Topic推送消息
  * @param device 创建的mqtt设备的指针
  * @param topic_name 推送消息的topic名称
@@ -46,6 +58,23 @@ int ont_mqtt_publish(ont_device_t *device,
 						 const char*content,
 						 size_t bytes,
 						 uint8_t qos_level);
+
+
+/**
+ * 
+ * @param topic_name: MQTT publish包的主题名称 
+ * @param payload:	  MQTT publish包的payload
+ * @param payload_size: MQTT publish包的payload的长度 
+ */
+typedef void (* ont_mqtt_publish_cb)(const char *topic_name, const char *payload, size_t payload_size);
+
+
+/**
+ * 设置publish消息回调函数
+ * @param device 创建的mqtt设备的指针
+ * @param cb 回调函数地址
+ */
+void set_ont_mqtt_publish_cb(ont_device_t *device, ont_mqtt_publish_cb cb);
 
 #ifdef __cplusplus
 } /* extern "C" */

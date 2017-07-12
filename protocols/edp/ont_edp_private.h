@@ -9,6 +9,7 @@
 #include "ont_list.h"
 #include "parser/macros.h"
 #include "parser/ont_pkt_formatter.h"
+#include "ont/edp.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -25,6 +26,7 @@ enum EDP_PROTOCOL_TYPE
     EDP_CONNECT_REQ   = 0x10,
     EDP_CONNECT_RESP  = 0x20,
     EDP_CONNECT_CLOSE = 0x40,
+    EDP_TRANS_DATA    = 0x70,
     EDP_SAVE_DATA     = 0x80,
     EDP_SAVE_ACK      = 0x90,
     EDP_CMD_REQ       = 0xA0,
@@ -63,6 +65,7 @@ typedef struct ont_edp_device_t{
     unsigned                    msg_id;
     int                         connect_status;
     int                         last_keep_alive_time;
+    ont_edp_get_transdata_cb    transdata_cb;    
 }ont_edp_device_t;
 
 /*edp connect packet*/
@@ -97,6 +100,13 @@ ont_parser_add_elem(cmd_id, bytes)
 ont_parser_add_elem(bin, binary)
 ont_parser_def_packet_end(edp_cmd_t)
 
+/*edp cmd transdata req && resp packet*/
+ont_parser_def_packet_begin(edp_trans_data_t)
+ont_parser_add_elem(svr_name, bytes)
+ont_parser_add_elem(data, raw)
+ont_parser_def_packet_end(edp_trans_data_t)
+
+
 /*** api ***/
 
 /*connect*/ 
@@ -109,6 +119,12 @@ int ont_edp_handle_reply_cmd(ont_edp_device_t* device, const char* cmd_id, const
 int ont_edp_handle_save_ack(const unsigned char* data, uint32_t len);
 int ont_edp_handle_get_cmd(const unsigned char* data, uint32_t len,
     ont_edp_device_t* device);
+
+/*data to user*/
+int ont_edp_handle_get_transdata(const unsigned char* data,size_t len,ont_edp_device_t* device);
+int ont_edp_handle_send_trans_data(ont_edp_device_t* device,const char* svr_name,
+    const char* data, size_t data_len);
+
 /*
 int ont_edp_realloc(void** src, uint32_t src_len, uint32_t dst_len);
 */

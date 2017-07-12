@@ -9,6 +9,7 @@ extern "C" {
 #include "ont_channel.h"
 #include "ont_tcp_channel.h"
 #include "ont/device.h"
+#include "ont/mqtt.h"
 #include "parser/parser.h"
 #include "parser/ont_pkt_formatter.h"
 
@@ -218,6 +219,8 @@ typedef struct ont_mqtt_device_t
 	int pkt_read_status;
 	int conn_status;
 	int mqtt_oper_result;
+
+	ont_mqtt_publish_cb publish_call_back;
 }ont_mqtt_device_t;
 
 /* declaration of packet serialize func */
@@ -252,7 +255,7 @@ int ont_serialize_mqtt_subscribe_packet(ont_device_t* device,const char **topic_
 
 int ont_serialize_mqtt_unsub_packet(ont_device_t* device,const char **topic_arry,size_t size);
 
-
+int ont_serialize_mqtt_publish_ack(ont_device_t* device, uint16_t packet_id);
 
 /* declaration of packet init func */
 int ont_parser_init_mqtt_connect_packet(mqtt_connect_packet* pkt);
