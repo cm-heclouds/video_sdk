@@ -30,6 +30,7 @@
 #define MAX_PRINT_LEN	2048
 
 RTMP_LogLevel RTMP_debuglevel = RTMP_LOGERROR;
+/*RTMP_LogLevel RTMP_debuglevel = RTMP_LOGDEBUG;*/
 
 static int neednl;
 

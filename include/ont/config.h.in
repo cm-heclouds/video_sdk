@@ -30,6 +30,13 @@
 #cmakedefine ONT_SERVER_PORT           ${ONT_SERVER_PORT}
 
 /**
+ * @def ONT_SERVER_PATH
+ *
+ * 服务器路径
+ */
+#cmakedefine ONT_SERVER_PATH           "${ONT_SERVER_PATH}"
+
+/**
  * @def ONT_PROTOCOL_EDP
  *
  * SDK支持EDP协议
@@ -38,12 +45,26 @@
 #cmakedefine ONT_PROTOCOL_EDP
 
 /**
+ * @def EDP_EXTRA_MODE
+ *
+ * EDP支持扩展
+**/
+#cmakedefine ONT_PROTOCOL_EDP_EXTRA
+
+/**
  * @def ONT_PROTOCOL_MQTT
  *
  * SDK支持MQTT协议
  * 注释后，SDK不再支持MQTT协议，MQTT协议相关代码不参与编译
  */
 #cmakedefine ONT_PROTOCOL_MQTT
+
+/**
+ * @def MQTT_EXTRA_MODE
+ *
+ * MQTT支持扩展
+**/
+#cmakedefine ONT_PROTOCOL_MQTT_EXTRA
 
 /**
  * @def ONT_PROTOCOL_MODBUS

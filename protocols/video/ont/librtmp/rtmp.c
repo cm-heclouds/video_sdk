@@ -362,7 +362,7 @@ int dStop, int bLiveStream, long int timeout)
     if (sockshost->av_len)
     {
         const char *socksport = strchr(sockshost->av_val, ':');
-        
+
         char *hostname = ont_platform_malloc( strlen(sockshost->av_val)+1);
         ont_platform_snprintf(hostname, strlen(sockshost->av_val)+1, "%s", sockshost->av_val);
 
@@ -1091,7 +1091,7 @@ RTMP_ClientPacket(RTMP *r, RTMPPacket *packet)
 }
 
 #ifdef RTMP_NETSTACKDUMP
-FILE *netstackdump = NULL; 
+FILE *netstackdump = NULL;
 #endif
 
 static int
@@ -1228,7 +1228,7 @@ WriteN(RTMP *r, const char *buffer, int n, int drop)
         if (now-last>r->Link.timeout*1000)
         {
             n=1; /*time out*/
-            break; 
+            break;
         }
         else if (drop)
         {
@@ -2600,12 +2600,14 @@ HandleInvoke(RTMP *r, const char *body, unsigned int nBodySize)
         ts = AMFProp_GetNumber(AMF_GetProp(&obj, NULL, 3));
         /*send stream EOF*/
         RTMP_SendCtrl(r, 1,0,0);
-        
+
         RTMP_SendStatus(r, (AVal*)&av_status, (AVal*)&av_NetStream_Seek_Notify, (AVal*)&av_seek_descvalue);
 
         if (r->seek_notify != NULL)
         {
-            (r->seek_notify)(r->rvodCtx, ts);
+            if ((r->seek_notify)(r->rvodCtx, ts) != 0) {
+                goto leave;
+            }
         }
         int i = 0;
         for (; i < RTMP_CHANNELS; i++)
@@ -3170,7 +3172,7 @@ HandShake(RTMP *r, int FP9HandShake)
     uptime = RTMP_GetTime();
 #else
     uptime = htonl(RTMP_GetTime());
-#endif    
+#endif
     memcpy(clientsig, &uptime, 4);
 
     memset(&clientsig[4], 0, 4);
@@ -3201,7 +3203,7 @@ HandShake(RTMP *r, int FP9HandShake)
     /* decode server response */
 
     memcpy(&suptime, serversig, 4);
-    
+
 #ifdef ONT_PROTOCOL_VIDEO
 	(void)bMatch;
 #else
@@ -3458,7 +3460,7 @@ int RTMP_SendStatus(RTMP *r, AVal *level, AVal *code, AVal *desc)
 {
     char pbuf[256], *pend = pbuf + sizeof(pbuf), *enc;
     AVal av_Response;
-    AVal av_onStatus = AVC("onStatus");  
+    AVal av_onStatus = AVC("onStatus");
     AVal av_level = AVC("level");
     AVal av_code = AVC("code");
     AVal av_desc = AVC("description");
@@ -3493,7 +3495,7 @@ int RTMP_SendPlayStatus(RTMP *r, AVal *level, AVal *code,  unsigned int ts, unsi
     AVal av_code = AVC("code");
     AVal av_dur = AVC("duration");
     AVal av_bytes = AVC("bytes");
-    
+
     enc = pbuf;
     enc = AMF_EncodeString(enc, pend, &av_onStatus);
     enc = AMF_EncodeNumber(enc, pend, 0);

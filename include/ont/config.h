@@ -20,7 +20,7 @@
  *
  * 服务器地址
  */
-#define ONT_SERVER_ADDRESS        "api.heclouds.com"
+#define ONT_SERVER_ADDRESS        "183.230.40.33"
 
 /**
  * @def ONT_SERVER_ADDRESS
@@ -28,6 +28,13 @@
  * 服务器端口
  */
 #define ONT_SERVER_PORT           80
+
+/**
+ * @def ONT_SERVER_PATH
+ *
+ * 服务器路径
+ */
+/* #undef ONT_SERVER_PATH */
 
 /**
  * @def ONT_PROTOCOL_EDP
@@ -38,12 +45,26 @@
 /* #undef ONT_PROTOCOL_EDP */
 
 /**
+ * @def EDP_EXTRA_MODE
+ *
+ * EDP支持扩展
+**/
+/* #undef ONT_PROTOCOL_EDP_EXTRA */
+
+/**
  * @def ONT_PROTOCOL_MQTT
  *
  * SDK支持MQTT协议
  * 注释后，SDK不再支持MQTT协议，MQTT协议相关代码不参与编译
  */
 #define ONT_PROTOCOL_MQTT
+
+/**
+ * @def MQTT_EXTRA_MODE
+ *
+ * MQTT支持扩展
+**/
+/* #undef ONT_PROTOCOL_MQTT_EXTRA */
 
 /**
  * @def ONT_PROTOCOL_MODBUS

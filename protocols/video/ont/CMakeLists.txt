@@ -11,7 +11,10 @@ include_directories(
     ${ONT_SDK_ROOT}/include
     ${ONT_SDK_ROOT}/base
     ${CMAKE_CURRENT_SOURCE_DIR}
-    ${ONT_SDK_ROOT}/protocols/video/mp4v2/include
+    ${ONT_SDK_ROOT}/protocols/base
+    ${ONT_SDK_ROOT}/protocols/video/ont
+    ${ONT_SDK_ROOT}/protocols/video/ont/cJSON
+
 )
 
 if(MSVC)
@@ -20,12 +23,15 @@ if(MSVC)
     list(APPEND INC_LIST ${INC_TEMP})
     file(GLOB_RECURSE INC_TEMP FOLLOW_SYMLINKS ${CMAKE_CURRENT_SOURCE_DIR}/librtmp/*.h)
     list(APPEND INC_LIST ${INC_TEMP})
+    file(GLOB_RECURSE INC_TEMP FOLLOW_SYMLINKS ${CMAKE_CURRENT_SOURCE_DIR}/cJSON/*.h)
+    list(APPEND INC_LIST ${INC_TEMP})
 endif(MSVC)
 
     
 aux_source_directory(${CMAKE_CURRENT_SOURCE_DIR} SRC_LIST)
 
 aux_source_directory(${CMAKE_CURRENT_SOURCE_DIR}/librtmp SRC_LIST)
+aux_source_directory(${CMAKE_CURRENT_SOURCE_DIR}/cJSON SRC_LIST)
 
 
 if(_STATIC)

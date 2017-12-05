@@ -21,7 +21,7 @@ unsigned char  rtmp_make_audio_headerTag(unsigned int format, unsigned int sampl
 int rtmp_send_spspps(void *_r, unsigned char * sps, int sps_len, unsigned char *pps, int pps_len, int ts)
 {
     RTMP* r = _r;
-    RTMPPacket * packet = NULL;/*rtmp°ü½á¹¹*/
+    RTMPPacket * packet = NULL;/* rtmpåŒ…ç»“æž„ */
     unsigned char * body = NULL;
     int i;
     int max_packet = RTMP_HEAD_SIZE + pps_len + sps_len + 32;
@@ -70,9 +70,9 @@ int rtmp_send_spspps(void *_r, unsigned char * sps, int sps_len, unsigned char *
     packet->m_headerType = RTMP_PACKET_SIZE_LARGE;
     packet->m_nInfoField2 = r->m_stream_id;
 
-    /*µ÷ÓÃ·¢ËÍ½Ó¿Ú*/
+    /* è°ƒç”¨å‘é€æŽ¥å£ */
     int nRet = RTMP_SendPacket(r, packet, FALSE, 0);
-    ont_platform_free(packet);   
+    ont_platform_free(packet);
     return nRet==TRUE?0:-1;
 }
 
@@ -99,7 +99,7 @@ static int _rtmp_setchunksize(RTMP* rtmp, uint32_t size)
     packet->m_nTimeStamp = 0;
     packet->m_hasAbsTimestamp = 0;
     packet->m_headerType = RTMP_PACKET_SIZE_MEDIUM;
-    packet->m_nInfoField2 = 0; 
+    packet->m_nInfoField2 = 0;
     int nRet =  RTMP_SendPacket(r, packet, FALSE, 0);
     if (nRet)
     {
@@ -145,6 +145,12 @@ void* rtmp_create_publishstream(const char *pushurl, unsigned int sock_timeout_s
     return rtmp;
 }
 
+
+void rtmp_stop_publishstream(void *rtmp)
+{
+	RTMP_Close((RTMP*)rtmp);
+	RTMP_Free((RTMP*)rtmp);
+}
 
 
 int rtmp_send_metadata(void* r, RTMPMetadata *metadata)
@@ -240,7 +246,7 @@ int rtmp_send_metadata(void* r, RTMPMetadata *metadata)
             prop.p_vu.p_number = metadata->audioDataRate;
             AMF_AddProp(&obj, &prop);
         }
-        
+
         avValue.av_val = "audiosamplerate";
         avValue.av_len = strlen(avValue.av_val);
         AMFProp_SetName(&prop, &avValue);
@@ -315,12 +321,12 @@ int rtmp_send_videodata(void* r, unsigned char *data, unsigned int size, unsigne
 {
     RTMP *rtmp = r;
     RTMPPacket packet;
-    
+
     if (rtmp == NULL)
     {
         return -1;
     }
-    
+
     RTMPPacket_Reset(&packet);
 	if (!RTMPPacket_Alloc(&packet, size+8)) /*reserve some data*/
 	{
@@ -340,7 +346,7 @@ int rtmp_send_videodata(void* r, unsigned char *data, unsigned int size, unsigne
 
 
     RTMPPacket_Free(&packet);
-    return nRet==TRUE?0:-1;
+    return nRet == TRUE ? 0:-1;
 }
 
 int rtmp_send_audiodata(void* r, unsigned char headertag, unsigned char *data, unsigned int size, unsigned int ts, unsigned int headertype)

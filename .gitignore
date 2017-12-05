@@ -1,5 +1,5 @@
-include/ont/config.h
 bin/*
 lib/*
 linuxbuild/*
 winbuild/*
+video_sample_build/*

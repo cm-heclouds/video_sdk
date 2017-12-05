@@ -76,6 +76,16 @@ typedef void (* ont_mqtt_publish_cb)(const char *topic_name, const char *payload
  */
 void set_ont_mqtt_publish_cb(ont_device_t *device, ont_mqtt_publish_cb cb);
 
+#ifdef ONT_PROTOCOL_MQTT_EXTRA
+    typedef void (* ont_mqtt_puback_cb)(ont_device_t *device, int pkt_id);
+    void set_ont_mqtt_puback_cb(ont_device_t *device, ont_mqtt_puback_cb cb);
+    typedef void (* ont_mqtt_suback_cb)(ont_device_t *device, int sub_result);
+    void set_ont_mqtt_suback_cb(ont_device_t *device, int sub_result, ont_mqtt_suback_cb cb);
+    typedef void (* ont_mqtt_unsuback_cb)(ont_device_t *device);
+    void set_ont_mqtt_unsuback_cb(ont_device_t *device, ont_mqtt_unsuback_cb cb);
+#endif
+
+
 #ifdef __cplusplus
 } /* extern "C" */
 #endif

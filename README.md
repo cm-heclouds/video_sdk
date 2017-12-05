@@ -55,7 +55,7 @@ SAMPLE 支持MP4格式的远程回放，MP4示例文件的下载地址 http://pa
 
 4. ARM Linux 交叉编译 
 创建目录 mkdir armlinux
-进入目录执行 cmake ../. -DCMAKE_TOOLCHAIN_FILE=../linux-arm.txt  -DCMAKE_BUILD_TYPE=debug -DARM-LINUX=1；
+进入目录执行 cmake ../. -DCMAKE_TOOLCHAIN_FILE=../linux-arm.txt   -D_MQTT=1 -D_VIDEO=1 -DCMAKE_BUILD_TYPE=debug -DARM-LINUX=1 -D_ONVIF=1 -D_MP4V2=1 -D_SAMPLE=1 ；
 SET(TOOLCHAIN_DIR "/usr/bin/arm-2009q3/arm-2009q3/") 设置正确的交叉编译工具链目录；
 如果需要链接SSL库，需要使用交叉编译工具编译对应的SSL版本，本工程使用openssl-1.0.1g，并复制到工具链对应的lib目录。
 

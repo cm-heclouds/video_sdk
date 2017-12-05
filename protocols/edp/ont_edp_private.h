@@ -15,7 +15,7 @@
 extern "C" {
 #endif
 
-#define EDP_CONNECT_TIMEOUT         5
+#define EDP_CONNECT_TIMEOUT         30
 #define EDP_CONNECT_KEEPALVIE       600
 
 #define MIN(a,b)    (a>b?b:a)
@@ -25,7 +25,10 @@ enum EDP_PROTOCOL_TYPE
 {
     EDP_CONNECT_REQ   = 0x10,
     EDP_CONNECT_RESP  = 0x20,
+    EDP_PUSH_DATA     = 0x30,
     EDP_CONNECT_CLOSE = 0x40,
+    EDP_UPDATE_REQ    = 0x50,
+    EDP_UPDATE_RESP   = 0x60,
     EDP_TRANS_DATA    = 0x70,
     EDP_SAVE_DATA     = 0x80,
     EDP_SAVE_ACK      = 0x90,
@@ -66,6 +69,14 @@ typedef struct ont_edp_device_t{
     int                         connect_status;
     int                         last_keep_alive_time;
     ont_edp_get_transdata_cb    transdata_cb;    
+    ont_edp_get_pushdata_cb     pushdata_cb;
+
+#ifdef ONT_PROTOCOL_EDP_EXTRA
+    ont_edp_conn_resp_cb_ex     conn_resp_cb_ex;
+    ont_edp_get_transdata_cb_ex transdata_cb_ex;
+    ont_edp_get_pushdata_cb_ex  pushdata_cb_ex;
+    ont_edp_save_ack_cb_ex      save_ack_cb_ex;
+#endif
 }ont_edp_device_t;
 
 /*edp connect packet*/
@@ -106,6 +117,11 @@ ont_parser_add_elem(svr_name, bytes)
 ont_parser_add_elem(data, raw)
 ont_parser_def_packet_end(edp_trans_data_t)
 
+/*edp cmd pushdata req && resp packet*/
+ont_parser_def_packet_begin(edp_push_data_t)
+ont_parser_add_elem(devid, bytes)
+ont_parser_add_elem(data, raw)
+ont_parser_def_packet_end(edp_push_data_t)
 
 /*** api ***/
 
@@ -116,7 +132,7 @@ int ont_edp_handle_send_dp(ont_edp_device_t* device,
 int ont_edp_handle_reply_cmd(ont_edp_device_t* device, const char* cmd_id, const char*data, uint32_t len);
 
 
-int ont_edp_handle_save_ack(const unsigned char* data, uint32_t len);
+int ont_edp_handle_save_ack(const unsigned char* data, uint32_t len,ont_edp_device_t* device);
 int ont_edp_handle_get_cmd(const unsigned char* data, uint32_t len,
     ont_edp_device_t* device);
 
@@ -124,6 +140,11 @@ int ont_edp_handle_get_cmd(const unsigned char* data, uint32_t len,
 int ont_edp_handle_get_transdata(const unsigned char* data,size_t len,ont_edp_device_t* device);
 int ont_edp_handle_send_trans_data(ont_edp_device_t* device,const char* svr_name,
     const char* data, size_t data_len);
+
+int ont_edp_handle_get_pushdata(const unsigned char* data,size_t len,ont_edp_device_t* device);
+int ont_edp_handle_send_pushdata(ont_edp_device_t* device,const char* devid,
+    const char* data, size_t data_len);
+
 
 /*
 int ont_edp_realloc(void** src, uint32_t src_len, uint32_t dst_len);

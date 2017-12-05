@@ -74,7 +74,7 @@ int ont_platform_tcp_connect(ont_socket_t *sock, const char *ip, uint16_t port);
 
 /**
  * 发送数据
- * @param sock socket句柄 
+ * @param sock socket句柄
  * @param buf  指向将要被发送的数据
  * @param size 将要被发送数据的字节数
  * @param bytes_sent [OUT] 成功发送的字节数
@@ -115,6 +115,11 @@ int ont_platform_save_device_status(const char *status, size_t size);
  * @return 加载成功返回ONT_ERR_OK
  */
 int ont_platform_load_device_status(char *status, size_t size);
+
+/**
+ * 获取socket fd
+ */
+int ont_platform_tcp_socketfd(ont_socket_t *sock);
 #endif /* ONT_PLATFORM_PERSISTENCE_SUPPORT */
 
 # ifdef __cplusplus

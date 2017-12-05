@@ -4,6 +4,7 @@
 #include "ont_channel.h"
 #include "ont/log.h"
 #include "ont/edp.h"
+#include <string.h>
 
 #ifdef ONT_PROTOCOL_EDP
 
@@ -36,8 +37,8 @@ int ont_edp_create(ont_device_t **dev)
     edp_dev = (ont_edp_device_t*)ont_platform_malloc(sizeof(ont_edp_device_t));
     if (NULL == edp_dev)
         return ONT_ERR_NOMEM;
-
-    edp_dev->channel.channel = NULL;
+    
+    memset(edp_dev,0x00,sizeof(ont_edp_device_t));
 
     *dev = (ont_device_t *)edp_dev;
 
@@ -52,7 +53,6 @@ int ont_edp_create(ont_device_t **dev)
         ont_platform_free(edp_dev);
         return ONT_ERR_NOMEM;
     }
-        
 
     if (ONT_ERR_OK != ont_pkt_formatter_init(edp_dev->formatter)){
         ont_list_destroy(edp_dev->cmd);
@@ -78,30 +78,31 @@ void ont_edp_destroy(ont_device_t *dev)
     CAST_TYPE(ont_edp_device_t*, dev, device);
     if (NULL == dev)
         return;
-
     if (device->channel.fn_deinitilize)
     {
         device->channel.fn_deinitilize(device->channel.channel);
     }
-    
+
     if (device->cmd)
     {
         ont_list_foreach(device->cmd, ont_cb_destroy_cmd, NULL);
         ont_list_destroy(device->cmd);
+	device->cmd = NULL;
     }
 
     if (device->formatter)
     {
         ont_pkt_formatter_destroy(device->formatter);
         ont_platform_free(device->formatter);
+	device->formatter = NULL;
     }
 
     ont_platform_free(device);
+    device = NULL;
 }
 int ont_edp_connect(ont_device_t *dev, const char *auth_info)
 {
     CAST_TYPE(ont_edp_device_t*, dev, device);
-
     int retcode = ont_tcp_channel_create(
                         &device->channel,
                         device->info.ip,
@@ -119,10 +120,10 @@ int ont_edp_connect(ont_device_t *dev, const char *auth_info)
 
     retcode = device->channel.fn_connect(device->channel.channel, &dev->exit);
     CHECK_RESULT(retcode, retcode);
-
-    retcode = ont_edp_handle_connect(device, device->info.key);
+    
+    retcode = ont_edp_handle_connect(device, auth_info);
     CHECK_RESULT(retcode, retcode);
-
+   
     retcode = device->channel.fn_write(
         device->channel.channel,
         device->formatter->result.data,
@@ -172,7 +173,7 @@ int ont_edp_check_packet(const unsigned char* buf,
         
         read_count++;
         pos++;
-        *remain_len += buf[pos] * multiplicator;
+        *remain_len += (buf[pos] & 0x7f) * multiplicator;
         multiplicator *= 0x80;
     } while (buf[pos] & 0x080);
 
@@ -190,7 +191,6 @@ int ont_edp_check_packet(const unsigned char* buf,
 int ont_edp_cb_recv_packet(void* ctx, const char* buf, size_t buf_size, size_t * read_size)
 {
     CAST_TYPE(ont_edp_device_t*, ctx, device);
-
     const unsigned char* data = (const unsigned char*)buf;
     uint8_t edp_type = 0;
     int remain_len = 0;
@@ -230,7 +230,13 @@ int ont_edp_cb_recv_packet(void* ctx, const char* buf, size_t buf_size, size_t *
                 device->result = ONT_ERR_FAILED_TO_AUTH;
             }
         }
-            
+
+#ifdef ONT_PROTOCOL_EDP_EXTRA
+        if ( device->conn_resp_cb_ex )
+        {
+            device->conn_resp_cb_ex( &device->info, device->result );
+        }
+#endif
         break;
     case EDP_CONNECT_CLOSE:
        ONT_LOG0(ONTLL_INFO, "recv connect close!");
@@ -255,7 +261,7 @@ int ont_edp_cb_recv_packet(void* ctx, const char* buf, size_t buf_size, size_t *
         break;
     case EDP_SAVE_ACK:
        ONT_LOG0(ONTLL_INFO, "recv save ack!");
-        device->result = ont_edp_handle_save_ack(data + data_start_pos, remain_len);
+        device->result = ont_edp_handle_save_ack(data + data_start_pos, remain_len, device);
         if (device->result == device->msg_id)
             device->result = 0;
         else
@@ -264,7 +270,7 @@ int ont_edp_cb_recv_packet(void* ctx, const char* buf, size_t buf_size, size_t *
     case EDP_CMD_REQ:
        ONT_LOG0(ONTLL_INFO, "recv cmd!");
         device->result = ont_edp_handle_get_cmd(data + data_start_pos, remain_len, device);
-        device->resp_status = EDP_RESP_CONTINUE;
+	device->resp_status = EDP_RESP_CONTINUE;
         return 0;/*continue recv*/
     case EDP_TRANS_DATA:
 	ONT_LOG1(ONTLL_INFO, "recv transdata! %d",remain_len);
@@ -272,7 +278,13 @@ int ont_edp_cb_recv_packet(void* ctx, const char* buf, size_t buf_size, size_t *
         device->resp_status = EDP_RESP_CONTINUE;
         return 0;/*continue recv*/
 	break;
-    default:
+     case EDP_PUSH_DATA:
+	ONT_LOG1(ONTLL_INFO, "recv pushdata! %d",remain_len);
+	device->result = ont_edp_handle_get_pushdata(data + data_start_pos, (size_t)remain_len, device);
+        device->resp_status = EDP_RESP_CONTINUE;
+        return 0;/*continue recv*/
+	break;
+   default:
         break;
     }
     device->resp_status = EDP_RESP_OK;
@@ -336,23 +348,22 @@ int ont_edp_keepalive(ont_device_t *dev)
         return ONT_ERR_SOCKET_OP_FAIL;
     do
     {
+	device->resp_status = EDP_RESP_OK;
 	retcode = device->channel.fn_process(device->channel.channel);
 	ont_platform_sleep(50);
     } while (retcode == 0 && device->resp_status == EDP_RESP_CONTINUE);
     if (ont_platform_time() - device->last_keep_alive_time < device->info.keepalive/3)
-        return ONT_ERR_OK;
-
+	return ONT_ERR_OK;
     retcode = device->channel.fn_write(device->channel.channel, data, sizeof(data));
     CHECK_RESULT(retcode, retcode);
-
     device->resp_status = EDP_RESP_CONTINUE;
     do
     {
-        retcode = device->channel.fn_process(device->channel.channel);
-        ont_platform_sleep(10);
+	retcode = device->channel.fn_process(device->channel.channel);
+	ont_platform_sleep(10);
     } while (retcode == 0 && device->resp_status == EDP_RESP_CONTINUE);
     if(retcode)
-        device->result = retcode;
+	device->result = retcode;
 
     if (device->result == ONT_ERR_OK)
         device->last_keep_alive_time = ont_platform_time();
@@ -396,11 +407,29 @@ int  ont_edp_send_datapoints(
 
     return retcode;
 }
-void ont_edp_set_transdata_cb(ont_device_t* dev,ont_edp_get_transdata_cb cb)
+
+#ifdef ONT_PROTOCOL_EDP_EXTRA
+void ont_edp_set_conn_resp_cb_ex( ont_device_t *dev, ont_edp_conn_resp_cb_ex cb )
+{
+    CAST_TYPE(ont_edp_device_t*, dev, device);
+    device->conn_resp_cb_ex = cb;
+}
+#endif
+
+void ont_edp_set_transdata_cb( ont_device_t* dev,ont_edp_get_transdata_cb cb )
 {
     CAST_TYPE(ont_edp_device_t*, dev, device);
     device->transdata_cb = cb;
 }
+
+#ifdef ONT_PROTOCOL_EDP_EXTRA
+void ont_edp_set_transdata_cb_ex( ont_device_t *dev, ont_edp_get_transdata_cb_ex cb )
+{
+    CAST_TYPE(ont_edp_device_t*, dev, device);
+    device->transdata_cb_ex = cb;
+}
+#endif
+
 int ont_edp_send_transdata(ont_device_t* dev,const char* svr_name,const char* data,size_t data_len)
 {
     CAST_TYPE(ont_edp_device_t*, dev, device);
@@ -418,18 +447,53 @@ int ont_edp_send_transdata(ont_device_t* dev,const char* svr_name,const char* da
 
     CHECK_RESULT(retcode, retcode);
 
-    device->resp_status = EDP_RESP_CONTINUE;
-    do
-    {
-        retcode = device->channel.fn_process(device->channel.channel);
-        ont_platform_sleep(50);
-/*    } while (retcode == 0 && device->resp_status == EDP_RESP_CONTINUE);*/
-    }while(0);
-    if(retcode)
-        device->result = retcode;
     device->last_keep_alive_time = ont_platform_time();
 
     return retcode;
 
 }
+
+void ont_edp_set_pushdata_cb(ont_device_t* dev, ont_edp_get_pushdata_cb cb)
+{
+    CAST_TYPE(ont_edp_device_t*, dev, device);
+    device->pushdata_cb = cb;
+}
+
+#ifdef ONT_PROTOCOL_EDP_EXTRA
+void ont_edp_set_pushdata_cb_ex( ont_device_t *dev, ont_edp_get_pushdata_cb_ex cb )
+{
+    CAST_TYPE(ont_edp_device_t*, dev, device);
+    device->pushdata_cb_ex = cb;
+}
+#endif
+
+int ont_edp_send_pushdata(ont_device_t* dev, const char* dst_devid, const char* data, size_t data_len)
+{
+    CAST_TYPE(ont_edp_device_t*, dev, device);
+    int retcode = 0;
+
+    if (dst_devid == NULL || dev == NULL || data == NULL || data_len == 0)
+        return ONT_ERR_BADPARAM;
+
+    retcode = ont_edp_handle_send_pushdata(device,dst_devid, data, data_len);
+    CHECK_RESULT(retcode, retcode);
+    retcode = device->channel.fn_write(device->channel.channel, 
+        device->formatter->result.data,
+        device->formatter->result.len);
+    ont_pkt_formatter_reset(device->formatter, 0);
+
+    CHECK_RESULT(retcode, retcode);
+    device->last_keep_alive_time = ont_platform_time();
+
+    return retcode;
+}
+
+#ifdef ONT_PROTOCOL_EDP_EXTRA
+void ont_edp_set_save_ack_cb_ex( ont_device_t *dev, ont_edp_save_ack_cb_ex cb )
+{
+    CAST_TYPE(ont_edp_device_t*, dev, device);
+    device->save_ack_cb_ex = cb;
+}
+#endif
+
 #endif

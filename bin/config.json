@@ -1,57 +1,108 @@
-{
-	"profile":{
-	   "accsvr":"183.230.40.39",
-	   "accport":6002,
-	   "deviceid":3264679,
-	   "productid":71273,
-	   "pass":"vedio2"
+{  
+    "profile":{
+	   "productid":111111,
+	   "pass":"11111111"
 	},
-	
-    "onvif": [
+     "onvif": [
+
+	    {   
+		    "title":"channel3",
+            "channel_id":3,
+            "url": "http://192.168.200.133:80/onvif/device_service",
+            "user": "admin",
+            "passwd": "test123456",
+            "defaultlevel": 2          
+        },
+	    {
+		    "title":"channel2",
+            "channel_id":2,
+            "url": "http://192.168.200.222:80/onvif/device_service",
+            "user": "admin",
+            "passwd": "test123456",
+            "defaultlevel": 3            
+        },
         {
+     		"title":"channel1",
             "channel_id":1,
-            "url": "http://192.168.1.114:80/onvif/device_service",
+            "url": "http://192.168.200.184:80/onvif/device_service",
             "user": "admin",
             "passwd": "admin",
-            "defaultlevel": 1
-        },
-		
-        {
-            "channel_id":2,        
-            "url": "http://192.168.1.184:80/onvif/device_service",
-            "user": "admin",
-            "passwd": "admin",
-            "defaultlevel": 2
-        },
-        {
-            "channel_id":3,            
-            "url": "http://192.168.1.185:80/onvif/device_service",
-            "user": "admin",
-            "passwd": "admin",
-             "defaultlevel": 1          
+            "defaultlevel": 1            
         }
+        
     ],
-	
+    
 	"rvod":
 	[
 		{
 		   "channel_id":1,
-		   "location":"e:\\test.mp4",
-		   "isupload":1,
-		   "dst":"video",
-		   "beginTime":"2016-12-06 16:30:30",
-		   "endTime":"2016-12-06 15:30:30",
-		   "videoDesc":"test_001"
+		   "location":"E:\\test.mp4",
+		   "beginTime":"2016-12-08 13:25:30",
+		   "endTime":"2016-12-04 14:30:30",
+		   "videoTitle":"test_1_1"
 		},
-		
+		{
+		   "channel_id":1,
+		   "location":"E:\\test.mp4",
+		   "beginTime":"2016-12-08 13:25:30",
+		   "endTime":"2016-12-04 14:30:30",
+		   "videoTitle":"test_1_1"
+		},
 		{
 		   "channel_id":1,
 		   "location":"e:\\test.mp4",
-		   "isupload":1,
-		   "dst":"video",
+		   "beginTime":"2016-12-07 14:28:30",
+		   "endTime":"2016-12-07 13:30:32",
+		   "videoTitle":"test_1_2"
+		},
+	    {
+		   "channel_id":2,
+		   "location":"e:\\test.mp4",
 		   "beginTime":"2016-12-07 12:30:30",
 		   "endTime":"2016-12-07 13:30:30",
-		   "videoDesc":"test_002"
+		   "videoTitle":"test_002"
+		},
+		{
+		   "channel_id":1,
+		   "location":"e:\\test.mp4",
+		   "beginTime":"2016-12-07 12:30:30",
+		   "endTime":"2016-12-07 13:30:33",
+		   "videoTitle":"test_1_3"
+		},
+		{
+		   "channel_id":1,
+		   "location":"e:\\test.mp4",
+		   "beginTime":"2016-12-07 12:30:30",
+		   "endTime":"2016-12-07 13:30:34",
+		   "videoTitle":"test_1_4"
+		},
+		{
+		   "channel_id":1,
+		   "location":"e:\\test.mp4",
+		   "beginTime":"2016-12-07 12:30:30",
+		   "endTime":"2016-12-07 13:30:34",
+		   "videoTitle":"test_1_4"
+		},
+		{
+		   "channel_id":1,
+		   "location":"e:\\test.mp4",
+		   "beginTime":"2016-12-07 12:30:30",
+		   "endTime":"2016-12-07 13:30:35",
+		   "videoTitle":"test_1_5"
+		},
+		{
+		   "channel_id":1,
+		   "location":"e:\\test.mp4",
+		   "beginTime":"2016-12-07 12:30:30",
+		   "endTime":"2016-12-07 13:30:36",
+		   "videoTitle":"test_1_6"
+		},
+		{
+		   "channel_id":1,
+		   "location":"e:\\test.mp4",
+		   "beginTime":"2016-12-07 12:30:30",
+		   "endTime":"2016-12-07 13:30:37",
+		   "videoTitle":"test_1_7"
 		}
 	]
 }

@@ -5,15 +5,21 @@
 #include "librtmp/rtmp_sys.h"
 #include "librtmp/log.h"
 #include "librtmp/amf.h"
+#include "ont/device.h"
 #include "ont/video.h"
 #include "ont/video_rvod.h"
 
 
-t_rtmp_vod_ctx *rtmp_rvod_createctx()
+
+t_rtmp_vod_ctx *rtmp_rvod_createctx(void *dev, void *user_data, t_ont_video_rvod_callbacks *vodcb)
 {
     /*ont_platform_malloc*/
     t_rtmp_vod_ctx *ctx = (t_rtmp_vod_ctx*)ont_platform_malloc(sizeof(t_rtmp_vod_ctx));
     memset(ctx, 0x00, sizeof(t_rtmp_vod_ctx));
+    ctx->dev = dev;
+    ctx->user_data =user_data;
+    memcpy(&ctx->callback, vodcb, sizeof(*vodcb));
+    
     return ctx;
 }
 
@@ -22,26 +28,6 @@ int rtmp_rvod_destoryctx(t_rtmp_vod_ctx* ctx)
     if (!ctx)
     {
         return -1;
-    }
-    if (ctx->sps)
-    {
-        ont_platform_free(ctx->sps);
-    }
-    if (ctx->pps)
-    {
-        ont_platform_free(ctx->pps);
-    }
-    if (ctx->video_buf)
-    {
-        ont_platform_free(ctx->video_buf);
-    }
-    if (ctx->audio_buf)
-    {
-        ont_platform_free(ctx->audio_buf);
-    }
-    if (ctx->audiocfg) /**/
-    {
-        ont_platform_free(ctx->audiocfg);
     }
     ont_platform_free(ctx);
     return 0;
@@ -77,38 +63,39 @@ static void  rtmp_rvod_stop_notify(void* ctx)
     {
         return;
     }
-    RTMP_LogPrintf("rtmp stopeed\n");
     t_rtmp_vod_ctx *c = ctx;
-    c->stopeed = 1;
-
+    c->status = 2;
+    c->callback.stop(c);
 }
 
 static void  rtmp_rvod_pause_notify(void* ctx, int paused, double ts)
 {
-    RTMP_LogPrintf("rtmp pause %d ts %lf\n", paused, ts);
     if (!ctx)
     {
         return;
     }
     t_rtmp_vod_ctx *c = ctx;
-    c->paused = paused;
+    c->callback.pause(c, paused, ts);
+}
 
-    if (paused)
+int  rtmp_rvod_seek_notify(t_rtmp_vod_ctx* ctx, double ts)
+{
+    /*seek to the specified type*/
+    if (!ctx)
     {
-        c->start_timestamp = ts;
+        return -1;
     }
-    else
-    {
-		c->start_timestamp = ts;
-        c->epoch = RTMP_GetTime();
-    }
+    t_rtmp_vod_ctx *c = ctx;
+    c->callback.seek(c, ts);
+    return 0;
 }
 
 
-int rtmp_rvod_start(t_rtmp_vod_ctx* ctx, const char *publishurl, const char*deviceid)
+int rtmp_rvod_start(t_rtmp_vod_ctx* ctx,  const char *pushurl, int timeout)
 {
     RTMP *rtmp;
-
+    char  dev_buf[32];
+    ont_device_t *dev;
     if (!ctx)
     {
         return -1;
@@ -117,7 +104,9 @@ int rtmp_rvod_start(t_rtmp_vod_ctx* ctx, const char *publishurl, const char*devi
     {
         return -1;
     }
-	rtmp = rtmp_create_publishstream(publishurl, 30, deviceid);
+    dev= (ont_device_t *)ctx->dev;
+	ont_platform_snprintf(dev_buf, sizeof(dev_buf), "%d", dev->device_id);
+	rtmp = rtmp_create_publishstream(pushurl, timeout, dev_buf);
     ctx->rtmp = rtmp;
 
     if (!rtmp)
@@ -125,21 +114,13 @@ int rtmp_rvod_start(t_rtmp_vod_ctx* ctx, const char *publishurl, const char*devi
         /*create connection error*/
         return -1;
     }
-
+    
     /*set the notificaiton function*/
     rtmp->pause_notify = rtmp_rvod_pause_notify;
     rtmp->seek_notify = rtmp_rvod_seek_notify;
     rtmp->stop_notify = rtmp_rvod_stop_notify;
-
-    rtmp->rvodCtx = ctx;
-
-    ctx->epoch = RTMP_GetTime();
-    ctx->start_timestamp = 0;
-	ont_platform_sleep(300);/* for rvod, need sleep a while to avoid server drop frame*/
-    rtmp_send_metadata(rtmp, &ctx->meta);
-
-    ctx->next_videosampleid = 1; /*start from 1*/
-    ctx->next_audiosampleid = 1;
+	rtmp->rvodCtx = ctx;
+    ctx->status =1;
 	return 0;
 }
 
@@ -151,7 +132,6 @@ int rtmp_rvod_stop(t_rtmp_vod_ctx* ctx)
         return -1;
     }
     RTMP *rtmp = ctx->rtmp;
-    rtmp_rvod_closefile(ctx);
     RTMP_Close(rtmp);
     RTMP_Free(rtmp);
     return 0;

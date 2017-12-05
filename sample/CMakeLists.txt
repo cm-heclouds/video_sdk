@@ -25,11 +25,6 @@ if(_MQTT)
     add_subdirectory(mqtt)
 endif(_MQTT)
 
-if(_MP4V2)
-    add_subdirectory(videomp4)
-endif(_MP4V2)
-
-
 if(_ONVIF)
-    add_subdirectory(videoonvif)
+    add_subdirectory(videosample)
 endif(_ONVIF)

@@ -156,15 +156,14 @@ int ont_tcp_channel_deinitilize(void* ch_ctx)
 	int iret = 0;
 	ONT_RETURN_IF_NIL(ch_ctx,ONT_ERR_BADPARAM);
 	ctx = (tcp_channel_t*)ch_ctx;
-
 	if (ctx->ch_status == tcp_ch_status_deinitilize)
 	{
-		return ONT_ERR_OK;
+	    return ONT_ERR_OK;
 	}
 
 	if (ctx->ch_status < tcp_ch_status_disconnect)
 	{
-		iret = ont_platform_tcp_close(ctx->socket);
+	iret = ont_platform_tcp_close(ctx->socket);
 		ONT_RETURN_ON_ERR(iret, iret);
 	}
 	

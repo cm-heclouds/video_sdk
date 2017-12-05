@@ -12,4 +12,4 @@ aux_source_directory(${CMAKE_CURRENT_SOURCE_DIR} SRC_LIST)
 
 add_executable(sample_${EDP} ${INC_LIST} ${SRC_LIST})
 
-target_link_libraries(sample_${EDP} ${EDP} ${LIBS})
+target_link_libraries(sample_${EDP} ${EDP} ${LIBS} -lcrypto)

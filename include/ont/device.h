@@ -16,7 +16,7 @@ struct ont_pkt_formatter_t;
 typedef enum ont_device_type_t {
     ONTDEV_EDP       = 1,      /**< EDP类型设备 */
     ONTDEV_JTEXT     = 3,      /**< JT/T808类型设备 */
-    ONTDEV_MODBUS    = 6,      /**< MODBUS类型设备 */
+    ONTDEV_MODBUS    = 5,      /**< MODBUS类型设备，用于获取接入机IP和PORT */
     ONTDEV_MQTT      = 7       /**< MQTT类型设备 */
 } ont_device_type_t;
 
@@ -44,6 +44,7 @@ typedef struct ont_device_t {
     char ip[16];         /**< 接入机IP， ipv4: xxx.xxx.xxx.xxx */
     uint16_t port;       /**< 接入机端口 */
     uint16_t keepalive;  /**< 设备保活时间，单位:秒 */
+    void *user_data;     /**< 用户数据 */
 
     volatile int exit;
     struct ont_pkt_formatter_t *formatter;
@@ -101,6 +102,41 @@ int ont_device_connect(ont_device_t *dev,
                        const char *reg_code,
                        const char *auth_info,
                        uint16_t keepalive);
+/**
+ * 与OneNET建立连接
+ * @param dev OneNET接入设备实例
+ * @param ip 服务器IP地址
+ * @param port 服务器端口
+ * @version version 服务器版本号
+ * @param reg_code 注册码
+ * @param auth_info 鉴权信息，每次调用该函数时，同一设备的鉴权信息应该相同
+ * @param keepalive 设备保活时间，单位：秒
+ * @return 成功建立连接则返回ONT_ERR_OK
+ */
+int ont_device_connect_ex(ont_device_t *dev,
+                          const char *ip,
+                          uint16_t port,
+                          const char *version,
+                          const char *reg_code,
+                          const char *auth_info,
+                          uint16_t keepalive);
+
+/**
+ * 与OneNET建立连接,不自动注册设备
+ * @param dev OneNET接入设备实例
+ * @param ip 服务器IP地址
+ * @param port 服务器端口
+ * @version version 服务器版本号
+ * @param auth_info 鉴权信息，每次调用该函数时，同一设备的鉴权信息应该相同
+ * @param keepalive 设备保活时间，单位：秒
+ * @return 成功建立连接则返回ONT_ERR_OK
+ */
+int ont_device_connect_without_autoReg(ont_device_t *dev,
+                                       const char *ip, 
+                                       uint16_t port,
+                                       const char *version,
+                                       const char *auth_info,
+                                       uint16_t keepalive);
 /**
  * 断开与OneNET的连接
  * @param dev OneNET接入设备实例

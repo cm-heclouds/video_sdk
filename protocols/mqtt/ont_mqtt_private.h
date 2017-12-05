@@ -221,6 +221,11 @@ typedef struct ont_mqtt_device_t
 	int mqtt_oper_result;
 
 	ont_mqtt_publish_cb publish_call_back;
+#ifdef ONT_PROTOCOL_MQTT_EXTRA
+	ont_mqtt_puback_cb puback_call_back;
+	ont_mqtt_suback_cb suback_call_back;
+	ont_mqtt_unsuback_cb unsuback_call_back;
+#endif
 }ont_mqtt_device_t;
 
 /* declaration of packet serialize func */

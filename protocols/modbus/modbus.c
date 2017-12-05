@@ -268,9 +268,11 @@ void ont_modbus_destroy( ont_device_t *dev ) {
 
     if ( NULL != dev ) {
         _dev = DEV2MODBUS( dev );
-        _dev->chl.fn_deinitilize( _dev->chl.channel );
+        if ( NULL != _dev->chl.fn_deinitilize ) {
+            _dev->chl.fn_deinitilize( _dev->chl.channel );
+        }
 
-        while ( ont_list_pop_front( _dev->cmd, (void**)&cmd ) ) {
+        while ( ont_list_pop_front( _dev->cmd, (void**)&cmd ) && cmd ) {
             ont_device_cmd_destroy( cmd );
         }
 
