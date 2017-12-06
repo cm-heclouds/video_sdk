@@ -273,7 +273,7 @@ int ONTVideoAudioSink::handleVideoFrame(unsigned frameSize, unsigned numTruncate
                 }
             //    rtmp_send_metadata(playctx->rtmp_client, &playctx->meta);
             }
-			if (spspps_changed)
+			//if (spspps_changed)
 			{
 				mspd = new RTMPMetaSpsPpsData();
 				mspd->sps_len = this->sps_len > sizeof(mspd->latestSps) ? sizeof(mspd->latestSps) : this->sps_len;
@@ -292,6 +292,11 @@ int ONTVideoAudioSink::handleVideoFrame(unsigned frameSize, unsigned numTruncate
             RTMPPackEnqueue(&_rtmp_mode_ctx, playctx->tempBuf, outsize, deltaTs, CODEC_H264, mspd, ctl);
         }
         else { /*p frame, etc.*/
+			if (!playctx->key_send)
+			{
+				offset += parseSize;
+				continue;
+			}
             RTMPVideoAudioCtl *ctl = new RTMPVideoAudioCtl();
             ctl->isKeyFram = 0;
 

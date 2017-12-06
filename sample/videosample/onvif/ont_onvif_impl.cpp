@@ -547,6 +547,7 @@ int ont_onvifdevice_live_stream_play(void *playctx, const char* push_url, const 
     }
     if (push_url) {
         r->rtmp_client = (RTMP*)rtmp_create_publishstream(push_url, 10, deviceid);
+		r->key_send = 0;
     }
 	r->state = 0;
     r->push_model = 1;
@@ -612,6 +613,7 @@ void* ont_onvifdevice_live_stream_start( void        *penv,
     r->rtsp_level = level;
     if (push_url) {
         r->rtmp_client = (RTMP*)rtmp_create_publishstream(push_url, 10, deviceid);
+		r->key_send = 0;
     }
     do
     {

@@ -15,6 +15,7 @@ typedef void HandlerProc(void* clientData, int mask);
 typedef struct ont_onvif_playctx_t {
     void *rtmp_client; /*RTMP handle.*/
     void *rtsp_client;
+	unsigned char key_send;
 	void *play_env;
 	unsigned long startts;
 	unsigned long last_sndts;/*latest send timestamp*/

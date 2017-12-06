@@ -339,12 +339,12 @@ int RTMPRvodPackDequeue(void *ctx)
     case CODEC_H264:
 
         if (playctx->sendmeta[0] == 0) {
-			rtmp_send_spspps(vodctx->rtmp, (unsigned char *)playctx->sps, playctx->spsLen, (unsigned char *)playctx->pps, playctx->ppsLen, pkdata->deltaTs);
+ 			rtmp_send_spspps(vodctx->rtmp, (unsigned char *)playctx->sps, playctx->spsLen, (unsigned char *)playctx->pps, playctx->ppsLen, pkdata->deltaTs);
             playctx->sendmeta[0] = 1;
         }
 		else if (pkdata->ctl->isKeyFram)
 		{
-			rtmp_send_spspps(vodctx->rtmp, (unsigned char *)playctx->sps, playctx->spsLen, (unsigned char *)playctx->pps, playctx->ppsLen, 0);
+			rtmp_send_spspps(vodctx->rtmp, (unsigned char *)playctx->sps, playctx->spsLen, (unsigned char *)playctx->pps, playctx->ppsLen, pkdata->deltaTs);
 		}
 		rtmp_send_videodata(vodctx->rtmp, (unsigned char *)pkdata->data, pkdata->size, pkdata->deltaTs, pkdata->ctl->isKeyFram);
         break;
@@ -408,17 +408,29 @@ int RTMPLivePackDequeue(void *ctx)
         playctx->state = 1;
     }
 
-    switch (pkdata->codecType) {
-    case CODEC_H264:
-        if (playctx->sendmeta[0] == 0) {
-            rtmp_send_metadata(playctx->rtmp_client, &playctx->meta);
-            playctx->sendmeta[0] = 1;
-        }
+	switch (pkdata->codecType) {
+	case CODEC_H264:
+		if (playctx->sendmeta[0] == 0) {
+			rtmp_send_metadata(playctx->rtmp_client, &playctx->meta);
+			playctx->sendmeta[0] = 1;
+		}
+		if (!playctx->key_send)
+		{
+			if (!pkdata->ctl->isKeyFram)
+			{
+				goto _end;
+			}
+		}
 		if (pkdata->ctl->isKeyFram && pkdata->mspd)  {
-            rtmp_send_spspps(playctx->rtmp_client, (unsigned char*)pkdata->mspd->latestSps, pkdata->mspd->sps_len,
-                    (unsigned char *)pkdata->mspd->latestPps, pkdata->mspd->pps_len, 0);
-        }
-        if (rtmp_send_videodata(playctx->rtmp_client, (unsigned char *)pkdata->data, pkdata->size, pkdata->deltaTs, pkdata->ctl->isKeyFram) < 0) {
+			rtmp_send_spspps(playctx->rtmp_client, (unsigned char*)pkdata->mspd->latestSps, pkdata->mspd->sps_len,
+				(unsigned char *)pkdata->mspd->latestPps, pkdata->mspd->pps_len, pkdata->deltaTs);
+		}
+		if (!playctx->key_send){
+			playctx->key_send = 1;
+		}
+
+        if (rtmp_send_videodata(playctx->rtmp_client, (unsigned char *)pkdata->data, pkdata->size, 
+			    pkdata->deltaTs, pkdata->ctl->isKeyFram) < 0) {
             playctx->state = 1;
             ONT_LOG1(ONTLL_INFO, "live packet dequeue, send video data, state is %d", playctx->state);
             goto _end;
