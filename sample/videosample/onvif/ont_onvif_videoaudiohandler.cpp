@@ -235,28 +235,44 @@ int ONTVideoAudioSink::handleVideoFrame(unsigned frameSize, unsigned numTruncate
 
         /*check the buffer */
         if ((buf[offset] & 0x0f) == 0x07){ /*sps*/
-			if (parseSize <= sizeof(latestSps))
+
+			if (this->sps_len == parseSize && memcmp(this->latestSps, &buf[offset], parseSize) == 0)
 			{
-				memcpy(this->latestSps, &buf[offset], parseSize);
-				this->sps_len = parseSize;
+				/**/
 			}
 			else
 			{
-				/*not use the sps*/
+				if (parseSize <= sizeof(latestSps))
+				{
+					memcpy(this->latestSps, &buf[offset], parseSize);
+					this->sps_len = parseSize;
+					spspps_changed = 1;
+				}
+				else
+				{
+					/*not use the sps*/
+				}
 			}
-			spspps_changed = 1;
         }
         else if ((buf[offset] & 0x0f) == 0x08) /*pps*/{
-			if (parseSize < sizeof(latestPps))
+
+			if (this->pps_len == parseSize && memcmp(this->latestPps, &buf[offset], parseSize) == 0)
 			{
-				memcpy(this->latestPps, &buf[offset], parseSize);
-				this->pps_len = parseSize;
+				/**/
 			}
 			else
 			{
-				/*not use the pps*/
+				if (parseSize < sizeof(latestPps))
+				{
+					memcpy(this->latestPps, &buf[offset], parseSize);
+					this->pps_len = parseSize;
+					spspps_changed = 1;
+				}
+				else
+				{
+					/*not use the pps*/
+				}
 			}
-			spspps_changed = 1;
         }
         else if ((buf[offset] & 0x0f) == 0x05) /*I frame*/{
             RTMPVideoAudioCtl *ctl = new RTMPVideoAudioCtl();
@@ -273,8 +289,9 @@ int ONTVideoAudioSink::handleVideoFrame(unsigned frameSize, unsigned numTruncate
                 }
             //    rtmp_send_metadata(playctx->rtmp_client, &playctx->meta);
             }
-			//if (spspps_changed)
+			if (spspps_changed)
 			{
+				spspps_changed = 0;
 				mspd = new RTMPMetaSpsPpsData();
 				mspd->sps_len = this->sps_len > sizeof(mspd->latestSps) ? sizeof(mspd->latestSps) : this->sps_len;
 				memcpy(mspd->latestSps, this->latestSps, mspd->sps_len);
@@ -378,6 +395,7 @@ struct timeval presentationTime, unsigned durationInMicroseconds) {
 
     if (!playctx->push_model)
     {
+		playctx->startts = 0;
 		sink->continuePlaying();
 		return;
     }

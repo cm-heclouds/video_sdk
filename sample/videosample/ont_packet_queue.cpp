@@ -420,15 +420,17 @@ int RTMPLivePackDequeue(void *ctx)
 			{
 				goto _end;
 			}
+			else
+			{
+				playctx->key_send = 1;
+			}
 		}
-		if (pkdata->ctl->isKeyFram && pkdata->mspd)  {
+		
+		if (pkdata->mspd)  {
 			rtmp_send_spspps(playctx->rtmp_client, (unsigned char*)pkdata->mspd->latestSps, pkdata->mspd->sps_len,
 				(unsigned char *)pkdata->mspd->latestPps, pkdata->mspd->pps_len, pkdata->deltaTs);
 		}
-		if (!playctx->key_send){
-			playctx->key_send = 1;
-		}
-
+		
         if (rtmp_send_videodata(playctx->rtmp_client, (unsigned char *)pkdata->data, pkdata->size, 
 			    pkdata->deltaTs, pkdata->ctl->isKeyFram) < 0) {
             playctx->state = 1;
