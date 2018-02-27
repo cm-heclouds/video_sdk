@@ -372,7 +372,10 @@ int ONTVideoAudioSink::handleAACFrame(unsigned frameSize, unsigned numTruncatedB
     return 0;
 }
 
+#if defined(WIN32) | defined(_WIN32)
 void gettimeofday(struct timeval *tv, void*);
+#endif
+
 
 void ONTVideoAudioSink::afterGettingFrame(void* clientData, unsigned frameSize, unsigned numTruncatedBytes,
 struct timeval presentationTime, unsigned durationInMicroseconds) {

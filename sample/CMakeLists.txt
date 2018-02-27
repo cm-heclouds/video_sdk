@@ -55,9 +55,9 @@ if(WIN32)
 	find_library(RSALIB NAMES mbedTLS
                 HINTS ${CMAKE_BINARY_DIR}/../lib/win )
 	list(APPEND LIBS ${RSALIB} )
+	list(APPEND LIBS ws2_32 )
 endif(WIN32)
 
-list(APPEND LIBS ws2_32 )
 
 if(_MP4V2)
     list(APPEND LIBS ${MP4V2} )
