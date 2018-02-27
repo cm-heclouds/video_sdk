@@ -1,8 +1,8 @@
 
 #include <time.h>
 
-#include "ont/platform.h"
-#include "ont/error.h"
+#include "platform.h"
+#include "error.h"
 
 extern void usleep(int micro_seconds);
 

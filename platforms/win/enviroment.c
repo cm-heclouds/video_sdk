@@ -1,7 +1,8 @@
 #include <WinSock2.h>
 #include <fcntl.h>
 #include <stdlib.h>
-#include "ont/platform.h"
+#include "platform.h"
+#include "port_sock.h"
 
 static int _gInitStatus = FALSE;
 /* initialize some environment about current platform */

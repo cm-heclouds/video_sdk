@@ -11,8 +11,8 @@
 #include <arpa/inet.h>
 
 
-#include "ont/error.h"
-#include "ont/platform.h"
+#include "error.h"
+#include "platform.h"
 #include "port_sock.h"
 
 
@@ -21,6 +21,7 @@ int ont_platform_tcp_create(ont_socket_t **sock)
     int flags = 1;
     int ret = 0;
     int s_buf_size = 655360; /*FOR MONVIF*/
+    int reuseaddr=1;
 
     ont_socket_t *_sock;
 
@@ -48,6 +49,7 @@ int ont_platform_tcp_create(ont_socket_t **sock)
     }
 
     setsockopt(_sock->fd, SOL_SOCKET, SO_SNDBUF, (char *)&s_buf_size, sizeof(int));
+    setsockopt(_sock->fd, SOL_SOCKET, SO_REUSEADDR, (const void *)&reuseaddr , sizeof(int));
 
     *sock = _sock;
     return ONT_ERR_OK;

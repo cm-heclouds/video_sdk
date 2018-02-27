@@ -3,8 +3,7 @@
 #include <string.h>
 #include <stdarg.h>
 
-#include "ont/platform.h"
-
+#include "platform.h"
 
 int ont_platform_snprintf(char *str, size_t size, const char *format, ...)
 {

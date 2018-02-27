@@ -1,6 +1,5 @@
 #include <stdlib.h>
-#include "ont/platform.h"
-
+#include "platform.h"
 
 void *ont_platform_malloc(size_t size)
 {

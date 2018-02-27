@@ -1,8 +1,7 @@
-
 #include <time.h>
 #include <windows.h>
-#include "ont/platform.h"
-#include "ont/error.h"
+#include "platform.h"
+#include "error.h"
 
 
 int32_t ont_platform_time()

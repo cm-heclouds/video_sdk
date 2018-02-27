@@ -1,12 +1,10 @@
-
 #include <WinSock2.h>
 #include <WS2tcpip.h>
 #include <errno.h>
 #include <stdio.h>
 
-
-#include "ont/error.h"
-#include "ont/platform.h"
+#include "error.h"
+#include "platform.h"
 #include "port_sock.h"
 
 
@@ -32,7 +30,6 @@ int ont_platform_tcp_create(ont_socket_t **sock)
         ont_platform_free(_sock);
         return ONT_ERR_SOCKET_OP_FAIL;
     }
-
 
     ret = WSAIoctl( _sock->fd, FIONBIO, &flags, sizeof(flags), NULL, 0, &returned, NULL, NULL );
     if ( NO_ERROR != ret )

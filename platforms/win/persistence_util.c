@@ -1,11 +1,9 @@
-
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include "ont/error.h"
-#include "ont/platform.h"
+#include "error.h"
+#include "platform.h"
 
 #ifdef ONT_PLATFORM_PERSISTENCE_SUPPORT /* 定义后系统支持持久化存储设备状态 */
 

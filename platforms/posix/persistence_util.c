@@ -2,8 +2,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "ont/error.h"
-#include "ont/platform.h"
+#include "error.h"
+#include "platform.h"
 
 
 #ifdef ONT_PLATFORM_PERSISTENCE_SUPPORT
