@@ -63,7 +63,6 @@ struct _ont_cmd_callbacks_t
 
 int32_t ont_videocmd_handle(void *dev, ont_device_cmd_t *cmd);
 
-int ont_video_playlist_singlestep(void *dev);
 
 
 # ifdef __cplusplus

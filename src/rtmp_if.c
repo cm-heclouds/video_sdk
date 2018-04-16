@@ -142,6 +142,7 @@ void* rtmp_create_publishstream(const char *pushurl, unsigned int sock_timeout_s
         return NULL;
     }
     /*RTMP_LogPrintf("could send data now\n");*/
+	_rtmp_setchunksize(rtmp, 1200);
     return rtmp;
 }
 
@@ -275,8 +276,6 @@ int rtmp_send_metadata(void* r, RTMPMetadata *metadata)
     AMF_Reset(&obj);
 
 
-    _rtmp_setchunksize(rtmp, 1200);
-
     return ret==TRUE?0:-1;
 }
 
@@ -328,14 +327,14 @@ int rtmp_send_videodata(void* r, unsigned char *data, unsigned int size, unsigne
     }
 
     RTMPPacket_Reset(&packet);
-	if (!RTMPPacket_Alloc(&packet, size+8)) /*reserve some data*/
+	if (!RTMPPacket_Alloc(&packet, size)) /*reserve some data*/
 	{
 		RTMP_LogPrintf("alloc packet err, body size %d\n", size);
 		return 0;
 	}
     packet.m_packetType = RTMP_PACKET_TYPE_VIDEO;
     packet.m_nChannel = 0x04;
-    packet.m_headerType = RTMP_PACKET_SIZE_MEDIUM;
+    packet.m_headerType = RTMP_PACKET_SIZE_LARGE;
     packet.m_hasAbsTimestamp = 0;
     packet.m_nTimeStamp = ts;
     packet.m_nInfoField2 = rtmp->m_stream_id;

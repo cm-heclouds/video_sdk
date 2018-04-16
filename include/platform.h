@@ -46,7 +46,7 @@ int ont_platform_snprintf(char *str, size_t size, const char *format, ...);
  * 获取当前时间，单位秒
  * @return 返回距离某固定时间点的秒数
  */
-int32_t ont_platform_time();
+uint32_t ont_platform_time();
 
 /**
  * 睡眠 milliseconds 毫秒

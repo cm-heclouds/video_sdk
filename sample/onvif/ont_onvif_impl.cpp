@@ -561,22 +561,6 @@ int ont_onvifdevice_live_stream_play(void *playctx, const char* push_url, const 
 }
 
 
-
-void *ont_onvifdevice_create_playenv()
-{
-    TaskScheduler* scheduler = BasicTaskScheduler::createNew();
-    BasicUsageEnvironment* env = BasicUsageEnvironment::createNew(*scheduler);
-    return env;
-}
-
-void ont_onvifdevice_delete_playenv(void *penv)
-{
-	BasicUsageEnvironment* env = (BasicUsageEnvironment*)penv;
-	TaskScheduler &scheduler = env->taskScheduler();
-    delete &scheduler;
-    delete env;
-}
-
 void* ont_onvifdevice_live_stream_start( void        *penv,
                                          void        *cluster,
                                          int          channel,

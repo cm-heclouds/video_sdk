@@ -10,6 +10,8 @@
 #define AUDIO_SINK_RECEIVE_BUFFER_SIZE 1000
 
 
+#define SEND_USE_QUEUE    1
+
 ONTVideoAudioSink* ONTVideoAudioSink::createNew( MediaSubsession& subsession,
     ont_onvif_playctx *ctx,
 	// identifies the kind of data that's being received
@@ -95,7 +97,7 @@ ONTVideoAudioSink::ONTVideoAudioSink(MediaSubsession& subsession,
 			{
 				if ((_p_extra = parseGeneralConfigStr(subsession.fmtp_config(),
 					_i_extra)))
-				{
+		            {  
 					p_extra = new char[_i_extra];
 					memcpy(p_extra, _p_extra, _i_extra);
 					i_extra = _i_extra;
@@ -275,8 +277,6 @@ int ONTVideoAudioSink::handleVideoFrame(unsigned frameSize, unsigned numTruncate
 			}
         }
         else if ((buf[offset] & 0x0f) == 0x05) /*I frame*/{
-            RTMPVideoAudioCtl *ctl = new RTMPVideoAudioCtl();
-            ctl->isKeyFram = 1;
 
             RTMPMetaSpsPpsData *mspd =NULL;
             if (sendmeta == 0 || playctx->sendmeta[0] ==0)
@@ -287,35 +287,25 @@ int ONTVideoAudioSink::handleVideoFrame(unsigned frameSize, unsigned numTruncate
                 {
                     h264_decode_seq_parameter_set(latestSps, this->sps_len, playctx->meta.width, playctx->meta.height);
                 }
-            //    rtmp_send_metadata(playctx->rtmp_client, &playctx->meta);
+#ifndef SEND_USE_QUEUE
+                rtmp_send_metadata(playctx->rtmp_client, &playctx->meta);
+				playctx->sendmeta[0] = 1;
+#endif
             }
 			if (spspps_changed)
 			{
 				spspps_changed = 0;
+#ifndef SEND_USE_QUEUE
+				rtmp_send_spspps(playctx->rtmp_client, (unsigned char*)this->latestSps, this->sps_len, (unsigned char *)this->latestPps, this->pps_len, deltaTs);
+#else
 				mspd = new RTMPMetaSpsPpsData();
 				mspd->sps_len = this->sps_len > sizeof(mspd->latestSps) ? sizeof(mspd->latestSps) : this->sps_len;
 				memcpy(mspd->latestSps, this->latestSps, mspd->sps_len);
 				mspd->pps_len = this->pps_len > sizeof(mspd->latestPps) ? sizeof(mspd->latestPps) : this->pps_len;
 				memcpy(mspd->latestPps, this->latestPps, mspd->pps_len);
+#endif
 			}
-			//rtmp_send_spspps(playctx->rtmp_client, (unsigned char*)this->latestSps, this->sps_len, (unsigned char *)this->latestPps, this->pps_len, deltaTs);
-            if (playctx->tempBufSize < parseSize + 9) /*need reserve 9 bytes for FLV video tag*/
-            {
-                free(playctx->tempBuf);
-                playctx->tempBuf = (unsigned char*)malloc(parseSize + 9);
-                playctx->tempBufSize = parseSize + 9;
-            }
-            int outsize = packFLVvideodata(&buf[offset], parseSize, playctx->tempBuf, playctx->tempBufSize, TRUE);
-            RTMPPackEnqueue(&_rtmp_mode_ctx, playctx->tempBuf, outsize, deltaTs, CODEC_H264, mspd, ctl);
-        }
-        else { /*p frame, etc.*/
-			if (!playctx->key_send)
-			{
-				offset += parseSize;
-				continue;
-			}
-            RTMPVideoAudioCtl *ctl = new RTMPVideoAudioCtl();
-            ctl->isKeyFram = 0;
+
 
             if (playctx->tempBufSize < parseSize + 9) /*need reserve 9 bytes for FLV video tag*/
             {
@@ -323,8 +313,36 @@ int ONTVideoAudioSink::handleVideoFrame(unsigned frameSize, unsigned numTruncate
                 playctx->tempBuf = (unsigned char*)malloc(parseSize + 9);
                 playctx->tempBufSize = parseSize + 9;
             }
+            int outsize = packFLVvideodata(&buf[offset], parseSize, playctx->tempBuf, playctx->tempBufSize, TRUE);
+#ifndef SEND_USE_QUEUE
+            rtmp_send_videodata(playctx->rtmp_client, playctx->tempBuf, outsize, deltaTs, TRUE);      
+			playctx->key_send = 1;
+#else
+			RTMPVideoAudioCtl *ctl = new RTMPVideoAudioCtl();
+			ctl->isKeyFram = 1;
+            RTMPPackEnqueue(&_rtmp_mode_ctx, playctx->tempBuf, outsize, deltaTs, CODEC_H264, mspd, ctl);
+#endif
+        }
+        else { /*p frame, etc.*/
+			if (!playctx->key_send)
+			{
+				offset += parseSize;
+				continue;
+			}
+            if (playctx->tempBufSize < parseSize + 9) /*need reserve 9 bytes for FLV video tag*/
+            {
+                free(playctx->tempBuf);
+                playctx->tempBuf = (unsigned char*)malloc(parseSize + 9);
+                playctx->tempBufSize = parseSize + 9;
+            }
             int outsize = packFLVvideodata(&buf[offset], parseSize, playctx->tempBuf, playctx->tempBufSize, FALSE);
-            RTMPPackEnqueue(&_rtmp_mode_ctx, playctx->tempBuf, outsize, deltaTs, CODEC_H264, NULL, ctl);
+#ifndef SEND_USE_QUEUE            
+            rtmp_send_videodata(playctx->rtmp_client, playctx->tempBuf, outsize, deltaTs, FALSE);    
+#else
+			RTMPVideoAudioCtl *ctl = new RTMPVideoAudioCtl();
+			ctl->isKeyFram = 0;
+            RTMPPackEnqueue(&_rtmp_mode_ctx, playctx->tempBuf, outsize, deltaTs, CODEC_H264, NULL, ctl);    
+#endif
         }
         offset += parseSize;
     } while (offset < frameSize);
@@ -340,34 +358,44 @@ int ONTVideoAudioSink::handleAACFrame(unsigned frameSize, unsigned numTruncatedB
 		return 0 ;
 	}
     */
-
+	if (playctx->sendmeta[0] == 0)
+	{
+		return 0;
+	}
     if (sendaudioheader == 0 || playctx->sendmeta[1] == 0)
     {
+		unsigned char audio_data[3];
+		audio_data[0] = 0x00;
+		audio_data[1] = p_extra[0];
+		audio_data[2] = p_extra[1];
+		sendaudioheader = 1;
+
+#ifndef SEND_USE_QUEUE      
+		rtmp_send_audiodata(playctx->rtmp_client, audioTag, audio_data, 3, 0, RTMP_PACKET_SIZE_LARGE);
+		playctx->sendmeta[1] = 1;
+#else
         RTMPVideoAudioCtl *ctl = new RTMPVideoAudioCtl();
         ctl->isAudioHeader = 1;
-
         RTMPAudioHeaderData  *ahd  =   new RTMPAudioHeaderData();
         ahd->audioTag = audioTag;
-        sendaudioheader = 1;
-        unsigned char audio_data[3];
-        audio_data[0] = 0x00;
-        audio_data[1] = p_extra[0];
-        audio_data[2] = p_extra[1];
-
         ahd->audiotype = RTMP_PACKET_SIZE_LARGE;
         RTMPPackEnqueue(&_rtmp_mode_ctx, audio_data, 3, 0, CODEC_MPEG4A, ahd, ctl);
-        //rtmp_send_audiodata(playctx->rtmp_client, audioTag, audio_data, 3, 0, RTMP_PACKET_SIZE_LARGE);
+#endif
 
     }
-    RTMPVideoAudioCtl *ctl = new RTMPVideoAudioCtl();
-    ctl->isAudioHeader = 0;
+	fReceiveBuffer[0] = 0x01;
+#ifndef SEND_USE_QUEUE       
+    rtmp_send_audiodata(playctx->rtmp_client, audioTag, fReceiveBuffer, frameSize + 1, deltaTs, RTMP_PACKET_SIZE_LARGE);
+#else
+	RTMPVideoAudioCtl *ctl = new RTMPVideoAudioCtl();
+	ctl->isAudioHeader = 0;
 
-    RTMPAudioHeaderData  *ahd  =   new RTMPAudioHeaderData();
-    ahd->audioTag = audioTag;
-    fReceiveBuffer[0] = 0x01;
-    ahd->audiotype = (deltaTs == 0) ? RTMP_PACKET_SIZE_LARGE : RTMP_PACKET_SIZE_MEDIUM;
+	RTMPAudioHeaderData  *ahd = new RTMPAudioHeaderData();
+	ahd->audioTag = audioTag;
+	ahd->audiotype = RTMP_PACKET_SIZE_LARGE;
+
     RTMPPackEnqueue(&_rtmp_mode_ctx, fReceiveBuffer, frameSize + 1, deltaTs, CODEC_MPEG4A, ahd, ctl);
-    //rtmp_send_audiodata(playctx->rtmp_client, audioTag, fReceiveBuffer, frameSize + 1, deltaTs, deltaTs == 0 ? RTMP_PACKET_SIZE_LARGE : RTMP_PACKET_SIZE_MEDIUM);
+#endif
 
     return 0;
 }

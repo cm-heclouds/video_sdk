@@ -34,9 +34,6 @@ typedef struct ont_onvif_playctx_t {
     void *cluster;
 }ont_onvif_playctx;
 
-void *ont_onvifdevice_create_playenv();
-
-void ont_onvifdevice_delete_playenv(void *env);
 
 
 int ont_onvifdevice_live_stream_play(void *playctx, const char* push_url, const char* deviceid);

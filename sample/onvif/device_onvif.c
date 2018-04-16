@@ -307,7 +307,7 @@ int  ont_onvifdevice_getplayurl(device_onvif_t *devicePtr, int profileindex)
     trt__GetStreamUri.StreamSetup->Transport->Tunnel = 0;
 
     trt__GetStreamUri.ProfileToken = devicePtr->profiles[profileindex].strprofile;
-    static struct soap *soap;
+    struct soap *soap;
     struct SOAP_ENV__Header header = { 0 };
 
     soap = soap_new();

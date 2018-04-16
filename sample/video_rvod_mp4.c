@@ -687,7 +687,7 @@ static int rtmp_rvod_mp4_closefile(t_rtmp_mp4_ctx* ctx)
     {
         return -1;
     }
-    if (!ctx->fileHanle)
+    if (ctx->fileHanle)
     {
         MP4Close(ctx->fileHanle, 0);
         ctx->fileHanle=0;      

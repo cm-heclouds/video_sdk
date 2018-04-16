@@ -104,7 +104,7 @@ int ont_platform_udp_recv(ont_socket_t *sock, char *buf,
     else if ( WSAEWOULDBLOCK == WSAGetLastError() )
     {
         *bytes_read = 0;
-        return ONT_ERR_SOCKET_OP_FAIL;
+        return ONT_ERR_SOCKET_INPROGRESS;
     }
     return ONT_ERR_SOCKET_OP_FAIL;
 }

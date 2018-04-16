@@ -103,7 +103,7 @@ int rtmp_rvod_start(t_rtmp_vod_ctx* ctx,  const char *pushurl, int timeout)
         return -1;
     }
     dev= (ont_device_t *)ctx->dev;
-	ont_platform_snprintf(dev_buf, sizeof(dev_buf), "%d", dev->device_id);
+	ont_platform_snprintf(dev_buf, sizeof(dev_buf), "%lld", dev->device_id);
 	rtmp = rtmp_create_publishstream(pushurl, timeout, dev_buf);
     ctx->rtmp = rtmp;
 

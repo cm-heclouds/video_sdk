@@ -13,7 +13,7 @@ extern "C" {
 #define M_FILEDES_MAX 255 /*!<文件描述最大长度, UTF-8 编码 */
 
 
-#define DEVICE_MSG_TIMEOUT 1000000 
+#define DEVICE_MSG_TIMEOUT 6000 
 
 /**
  * 设备状态，内部使用

@@ -358,7 +358,7 @@ int RTMPRvodPackDequeue(void *ctx)
             goto _end;
         }
 		rtmp_send_audiodata(vodctx->rtmp, playctx->audioHeaderTag, (unsigned char *)pkdata->data, pkdata->size,
-                pkdata->deltaTs, RTMP_PACKET_SIZE_MEDIUM);
+                pkdata->deltaTs, RTMP_PACKET_SIZE_LARGE);
         break;
     default:
         break;
@@ -431,7 +431,7 @@ int RTMPLivePackDequeue(void *ctx)
             playctx->state = 1;
             ONT_LOG1(ONTLL_INFO, "live packet dequeue, send video data, state is %d", playctx->state);
             goto _end;
-        }
+        }  
         break;
     case CODEC_MPEG4A:
         if (playctx->sendmeta[0] == 0) {

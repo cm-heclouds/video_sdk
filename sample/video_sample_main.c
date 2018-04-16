@@ -100,7 +100,17 @@ LONG ApplicationCrashHandler(EXCEPTION_POINTERS *pException)
 
 	return EXCEPTION_EXECUTE_HANDLER;
 }
+
 #endif
+
+void GetWorkDir(char *pBuf)
+{
+	//char pBuf[MAX_PATH];   
+#ifdef WIN32
+	GetCurrentDirectory(MAX_PATH, pBuf);
+	strcat(pBuf, "\\");
+#endif
+}
 
 int32_t _ont_cmd_live_stream_ctrl(void *dev, int32_t channel, int32_t level);
 int32_t _ont_cmd_dev_ptz_ctrl(void *dev, int32_t channel, int32_t mode, t_ont_video_ptz_cmd ptz, int32_t speed);
@@ -177,11 +187,17 @@ int main(int argc, char *argv[])
 	ont_log_set_logger(NULL, sample_log);
 	ont_log_set_log_level(ONTLL_DEBUG);
 
+	char cfg_path[256] = {0};
+	GetWorkDir(cfg_path);
+	strcat(cfg_path, "config.json");
+
+	ONT_LOG1(ONTLL_INFO, "cfg_path:%s\n", cfg_path);
 #ifdef WIN32
-	//cfg_initilize("E:\\video_proj\\trunk\\video_sdk\\bin\\Debug\\config.json");
-	cfg_initilize("config.json");
+    //cfg_initilize("E:\\share\\video_proj\\video_sdk\\bin\\Debug\\config.json");
+	
+	cfg_initilize(cfg_path);
 #else
-	cfg_initilize("config.json");
+	cfg_initilize(cfg_path);
 #endif
 	//cfg_initilize("config.json");
 	uint64_t product_id = cfg_get_profile()->productid;

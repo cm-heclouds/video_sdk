@@ -110,7 +110,15 @@ uint32_t
 RTMP_GetTime()
 {
     /* need ms*/
-    return ont_platform_time()*1000;
+    static uint32_t ts_base=0;
+    uint32_t ts=ont_platform_time();
+    if (!ts_base) 
+    {
+        ts_base=ts;
+        return 999;/*not return 0*/
+    }
+    /*avoid data overflow*/
+    return (ts+1-ts_base)*1000;
 }
 
 void
