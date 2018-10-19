@@ -190,13 +190,15 @@ OggTrackTable::~OggTrackTable() {
 }
 
 void OggTrackTable::add(OggTrack* newTrack) {
+  /* add (unsigned long) cast for -Wint-to-pointer-cast warning of compiler */
   OggTrack* existingTrack
-    = (OggTrack*)fTable->Add((char const*)newTrack->trackNumber, newTrack);
+    = (OggTrack*)fTable->Add((char const*)(unsigned long)newTrack->trackNumber, newTrack);
   delete existingTrack; // if any
 }
 
 OggTrack* OggTrackTable::lookup(u_int32_t trackNumber) {
-  return (OggTrack*)fTable->Lookup((char const*)trackNumber);
+  /* add (unsigned long) cast for -Wint-to-pointer-cast warning of compiler */
+  return (OggTrack*)fTable->Lookup((char const*)(unsigned long)trackNumber);
 }
 
 unsigned OggTrackTable::numTracks() const { return fTable->numEntries(); }
@@ -248,7 +250,9 @@ FramedSource* OggDemux::newDemuxedTrack(u_int32_t& resultTrackNumber) {
 
   resultTrackNumber = nextTrack->trackNumber;
   FramedSource* trackSource = new OggDemuxedTrack(envir(), resultTrackNumber, *this);
-  fDemuxedTracksTable->Add((char const*)resultTrackNumber, trackSource);
+  
+  /* add (unsigned long) cast for -Wint-to-pointer-cast warning of compiler */
+  fDemuxedTracksTable->Add((char const*)(unsigned long)resultTrackNumber, trackSource);
   return trackSource;
 }
 
@@ -256,12 +260,15 @@ FramedSource* OggDemux::newDemuxedTrackByTrackNumber(unsigned trackNumber) {
   if (trackNumber == 0) return NULL;
 
   FramedSource* trackSource = new OggDemuxedTrack(envir(), trackNumber, *this);
-  fDemuxedTracksTable->Add((char const*)trackNumber, trackSource);
+  
+  /* add (unsigned long) cast for -Wint-to-pointer-cast warning of compiler */
+  fDemuxedTracksTable->Add((char const*)(unsigned long)trackNumber, trackSource);
   return trackSource;
 }
 
 OggDemuxedTrack* OggDemux::lookupDemuxedTrack(u_int32_t trackNumber) {
-  return (OggDemuxedTrack*)fDemuxedTracksTable->Lookup((char const*)trackNumber);
+  /* add (unsigned long) cast for -Wint-to-pointer-cast warning of compiler */
+  return (OggDemuxedTrack*)fDemuxedTracksTable->Lookup((char const*)(unsigned long)trackNumber);
 }
 
 OggDemux::OggDemux(OggFile& ourFile)
@@ -287,7 +294,8 @@ OggDemux::~OggDemux() {
 }
 
 void OggDemux::removeTrack(u_int32_t trackNumber) {
-  fDemuxedTracksTable->Remove((char const*)trackNumber);
+  /* add (unsigned long) cast for -Wint-to-pointer-cast */
+  fDemuxedTracksTable->Remove((char const*)(unsigned long)trackNumber);
   if (fDemuxedTracksTable->numEntries() == 0) {
     // We no longer have any demuxed tracks, so delete ourselves now:
     delete this;

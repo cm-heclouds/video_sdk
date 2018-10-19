@@ -288,7 +288,7 @@ int readSocket(UsageEnvironment& env,
   SOCKLEN_T addressSize = sizeof fromAddress;
   int bytesRead = recvfrom(socket, (char*)buffer, bufferSize, 0,
 			   (struct sockaddr*)&fromAddress,
-			   &addressSize);
+			  (socklen_t *)&addressSize);
   if (bytesRead < 0) {
     //##### HACK to work around bugs in Linux and Windows:
     int err = env.getErrno();
@@ -374,7 +374,7 @@ static unsigned getBufferSize(UsageEnvironment& env, int bufOptName,
   unsigned curSize;
   SOCKLEN_T sizeSize = sizeof curSize;
   if (getsockopt(socket, SOL_SOCKET, bufOptName,
-		 (char*)&curSize, &sizeSize) < 0) {
+		 (char*)&curSize, (socklen_t *)&sizeSize) < 0) {
     socketErr(env, "getBufferSize() error: ");
     return 0;
   }
@@ -561,7 +561,7 @@ Boolean socketLeaveGroupSSM(UsageEnvironment& /*env*/, int socket,
 static Boolean getSourcePort0(int socket, portNumBits& resultPortNum/*host order*/) {
   sockaddr_in test; test.sin_port = 0;
   SOCKLEN_T len = sizeof test;
-  if (getsockname(socket, (struct sockaddr*)&test, &len) < 0) return False;
+  if (getsockname(socket, (struct sockaddr*)&test, (socklen_t *)&len) < 0) return False;
 
   resultPortNum = ntohs(test.sin_port);
   return True;

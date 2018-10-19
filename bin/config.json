@@ -1,39 +1,47 @@
 {
-    "profile":{
-           "productid":1111,
-		   "deviceid":0,
-           "pass":"11111",
-		   "id":"mac-or-something"
-        },
-     "onvif": [
-        {
-            "title":"1",
-            "channel_id":1,
-            "url": "http://192.168.200.222/onvif/device_service",
-            "user": "admin",
-            "passwd": "test123456",
-			"desc":"1",
-            "defaultlevel": 1
-        },
+	"profile":{
+		"productid":产品ID,
+		"deviceid":设备ID,未用,
+		"pass":"设备注册码",
+		"id":"设备标识"
+    },
+
+    "onvif": [
 		{
-            "title":"2",
-            "channel_id":2,
-            "url": "http://192.168.200.184/onvif/device_service",
-            "user": "admin",
-            "passwd": "test123456",
-			"desc":"1",
-            "defaultlevel": 1
-        }
+			"title":"title1",
+			"channel_id":1,
+			"url": "http://xxxx.xxx.xxx.xxx/yyy/zzz",
+			"user": "XXX",
+			"passwd": "XXX",
+			"desc":"onvif of title1",
+			"defaultlevel": 1
+		},
+		{
+			"title":"title2",
+			"channel_id":2,
+			"url": "http://xxx.xxx.xxx.xxy/yyy/zzz",
+			"user": "XXX",
+			"passwd": "XXX",
+			"desc":"onvif of title2",
+			"defaultlevel": 2
+		}
     ],
 
-        "rvod":
-        [
-                {
-                   "channel_id":1,
-                   "location":"E:\\test.mp4",
-                   "beginTime":"2016-12-08 00:00:00",
-                   "endTime":"2016-12-08 00:29:59",
-                   "videoTitle":"1"
-                }
-        ]
+    "rvod":
+    [
+        {
+           "channel_id":1,
+           "location":"./test1.mp4",
+           "beginTime":"2010-12-08 00:00:00",
+           "endTime":"2010-12-08 00:22:59",
+           "videoTitle":"title1"
+        },
+        {
+           "channel_id":1,
+           "location":"./test2.mp4",
+           "beginTime":"2010-12-08 00:00:00",
+           "endTime":"2010-12-08 00:23:59",
+           "videoTitle":"title2"
+        }
+    ]
 }

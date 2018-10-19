@@ -200,7 +200,8 @@ void OnDemandServerMediaSubsession
   } else { // TCP
     destinations = new Destinations(tcpSocketNum, rtpChannelId, rtcpChannelId);
   }
-  fDestinationsHashTable->Add((char const*)clientSessionId, destinations);
+  /* add (unsigned long) for -Wint-to-pointer-cast warning of compiler */
+  fDestinationsHashTable->Add((char const*)(unsigned long)clientSessionId, destinations);
 }
 
 void OnDemandServerMediaSubsession::startStream(unsigned clientSessionId,
@@ -212,8 +213,10 @@ void OnDemandServerMediaSubsession::startStream(unsigned clientSessionId,
 						ServerRequestAlternativeByteHandler* serverRequestAlternativeByteHandler,
 						void* serverRequestAlternativeByteHandlerClientData) {
   StreamState* streamState = (StreamState*)streamToken;
+  
+  /* add (unsigned long) for -Wint-to-pointer-cast warning of compiler */
   Destinations* destinations
-    = (Destinations*)(fDestinationsHashTable->Lookup((char const*)clientSessionId));
+    = (Destinations*)(fDestinationsHashTable->Lookup((char const*)(unsigned long)clientSessionId));
   if (streamState != NULL) {
     streamState->startPlaying(destinations, clientSessionId,
 			      rtcpRRHandler, rtcpRRHandlerClientData,
@@ -336,10 +339,12 @@ void OnDemandServerMediaSubsession::deleteStream(unsigned clientSessionId,
   StreamState* streamState = (StreamState*)streamToken;
 
   // Look up (and remove) the destinations for this client session:
+  /* add (unsigned long) for -Wint-to-pointer-cast warning of compiler */
   Destinations* destinations
-    = (Destinations*)(fDestinationsHashTable->Lookup((char const*)clientSessionId));
+    = (Destinations*)(fDestinationsHashTable->Lookup((char const*)(unsigned long)clientSessionId));
   if (destinations != NULL) {
-    fDestinationsHashTable->Remove((char const*)clientSessionId);
+    /* add (unsigned long) for -Wint-to-pointer-cast warning of compiler */
+    fDestinationsHashTable->Remove((char const*)(unsigned long)clientSessionId);
 
     // Stop streaming to these destinations:
     if (streamState != NULL) streamState->endPlaying(destinations, clientSessionId);

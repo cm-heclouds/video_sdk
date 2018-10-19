@@ -9,15 +9,14 @@ include_directories(
 ${CMAKE_CURRENT_SOURCE_DIR} 
 ${CMAKE_CURRENT_SOURCE_DIR}/protocol
 ${CMAKE_CURRENT_SOURCE_DIR}/openssl-1.0.1g/include
-${ONT_SDK_ROOT}/protocols/base
 ${ONT_SDK_ROOT}/src/librtmp
+${ONT_SDK_ROOT}/src/mbedtls-2.6.0/include
 ${ONT_SDK_ROOT}/sample
 ${ONT_SDK_ROOT}/sample/live/BasicUsageEnvironment/include
 ${ONT_SDK_ROOT}/sample/live/groupsock/include
 ${ONT_SDK_ROOT}/sample/live/liveMedia/include
 ${ONT_SDK_ROOT}/sample/live/UsageEnvironment/include
 ${ONT_SDK_ROOT}/sample/live/liveMedia/include
-${ONT_SDK_ROOT}/protocols/video/ont
 )
 
 add_definitions(-DWITH_OPENSSL)

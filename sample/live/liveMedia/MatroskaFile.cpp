@@ -632,13 +632,16 @@ MatroskaTrackTable::~MatroskaTrackTable() {
 } 
 
 void MatroskaTrackTable::add(MatroskaTrack* newTrack, unsigned trackNumber) {
-  if (newTrack != NULL && newTrack->trackNumber != 0) fTable->Remove((char const*)newTrack->trackNumber);
-  MatroskaTrack* existingTrack = (MatroskaTrack*)fTable->Add((char const*)trackNumber, newTrack);
+  /* add (unsigned long) cast for -Wint-to-pointer-cast warning of compiler */
+  if (newTrack != NULL && newTrack->trackNumber != 0) fTable->Remove((char const*)((unsigned long)newTrack->trackNumber));
+  MatroskaTrack* existingTrack = (MatroskaTrack*)fTable->Add((char const*)((unsigned long)trackNumber), newTrack);
   delete existingTrack; // in case it wasn't NULL
 }
 
 MatroskaTrack* MatroskaTrackTable::lookup(unsigned trackNumber) {
-  return (MatroskaTrack*)fTable->Lookup((char const*)trackNumber);
+  
+  /* add (unsigned long) cast for -Wint-to-pointer-cast warning of compiler */
+  return (MatroskaTrack*)fTable->Lookup((char const*)((unsigned long)trackNumber));
 }
 
 unsigned MatroskaTrackTable::numTracks() const { return fTable->numEntries(); }
@@ -725,16 +728,20 @@ FramedSource* MatroskaDemux::newDemuxedTrackByTrackNumber(unsigned trackNumber) 
   if (trackNumber == 0) return NULL;
 
   FramedSource* trackSource = new MatroskaDemuxedTrack(envir(), trackNumber, *this);
-  fDemuxedTracksTable->Add((char const*)trackNumber, trackSource);
+  
+  /* add (unsigned long) cast for -Wint-to-pointer-cast warning of compiler */
+  fDemuxedTracksTable->Add((char const*)((unsigned long)trackNumber), trackSource);
   return trackSource;
 }
 
 MatroskaDemuxedTrack* MatroskaDemux::lookupDemuxedTrack(unsigned trackNumber) {
-  return (MatroskaDemuxedTrack*)fDemuxedTracksTable->Lookup((char const*)trackNumber);
+  /* add (unsigned long) cast for -Wint-to-pointer-cast warning of compiler */
+  return (MatroskaDemuxedTrack*)fDemuxedTracksTable->Lookup((char const*)((unsigned long)trackNumber));
 }
 
 void MatroskaDemux::removeTrack(unsigned trackNumber) {
-  fDemuxedTracksTable->Remove((char const*)trackNumber);
+  /* add (unsigned long) cast for -Wint-to-pointer-cast warning of compiler */
+  fDemuxedTracksTable->Remove((char const*)((unsigned long)trackNumber));
   if (fDemuxedTracksTable->numEntries() == 0) {
     // We no longer have any demuxed tracks, so delete ourselves now:
     Medium::close(this);

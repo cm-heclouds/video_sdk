@@ -53,7 +53,8 @@ static void rtmp_log_default(int level, const char *format, va_list vl)
 	if (RTMP_debuglevel < RTMP_LOGDEBUG && strstr(str, "no-name") != NULL)
 	  return;
 
-	if ( !fmsg ) fmsg = stderr;
+	if ( !fmsg ) 
+        fmsg = stderr;
 
 	if ( level <= RTMP_debuglevel ) {
 		if (neednl) {
@@ -61,9 +62,7 @@ static void rtmp_log_default(int level, const char *format, va_list vl)
 			neednl = 0;
 		}
 		fprintf(fmsg, "%s: %s\n", levels[level], str);
-#ifdef _DEBUG
 		fflush(fmsg);
-#endif
 	}
 }
 
@@ -89,6 +88,8 @@ RTMP_LogLevel RTMP_LogGetLevel()
 
 void RTMP_Log(int level, const char *format, ...)
 {
+	if (level > RTMP_debuglevel)
+		return;
 	va_list args;
 	va_start(args, format);
 	cb(level, format, args);

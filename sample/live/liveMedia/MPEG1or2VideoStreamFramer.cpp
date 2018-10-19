@@ -459,8 +459,9 @@ unsigned MPEG1or2VideoStreamParser::parseSlice() {
       break;
     }
     default: {
+      /* add (unsigned long) cast for -Wint-to-pointer-cast warning of compiler */
       usingSource()->envir() << "MPEG1or2VideoStreamParser::parseSlice(): Saw unexpected code "
-			    << (void*)next4Bytes << "\n";
+			    << (void*)((unsigned long)next4Bytes) << "\n";
       setParseState(PARSING_SLICE); // the safest way to recover...
       break;
     }

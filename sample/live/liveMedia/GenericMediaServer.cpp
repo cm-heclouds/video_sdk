@@ -184,7 +184,7 @@ void GenericMediaServer::incomingConnectionHandler() {
 void GenericMediaServer::incomingConnectionHandlerOnSocket(int serverSocket) {
   struct sockaddr_in clientAddr;
   SOCKLEN_T clientAddrLen = sizeof clientAddr;
-  int clientSocket = accept(serverSocket, (struct sockaddr*)&clientAddr, &clientAddrLen);
+  int clientSocket = accept(serverSocket, (struct sockaddr*)&clientAddr, (socklen_t *)&clientAddrLen);
   if (clientSocket < 0) {
     int err = envir().getErrno();
     if (err != EWOULDBLOCK) {

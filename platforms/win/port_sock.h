@@ -6,12 +6,11 @@
 extern "C" {
 #endif
 
-typedef struct ont_socket_t
-{
-    SOCKET fd;
-    char ip[40];   /*remote ip address*/
-    uint16_t port; /*remote port.*/
-}ont_socket_t;
+typedef struct ont_socket_t {
+	SOCKET fd;
+	char ip[40];   /*remote ip address*/
+	uint16_t port; /*remote port.*/
+} ont_socket_t;
 
 
 extern int initialize_environment( void );

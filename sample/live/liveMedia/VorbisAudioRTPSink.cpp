@@ -253,11 +253,28 @@ char* generateVorbisOrTheoraConfigStr(u_int8_t* identificationHeader, unsigned i
       *p++ = length2&0x7F; // the low 7 bits
     }
   }
+  #if 0 /* for -Wmisleading-indentation */
   // Copy each header:
   if (identificationHeader != NULL) memmove(p, identificationHeader, identificationHeaderSize); p += identificationHeaderSize;
   if (commentHeader != NULL) memmove(p, commentHeader, commentHeaderSize); p += commentHeaderSize;
   if (setupHeader != NULL) memmove(p, setupHeader, setupHeaderSize);
+  #endif
   
+  //Copy each header:
+  if (identificationHeader != NULL) {
+    memmove(p, identificationHeader, identificationHeaderSize);
+  }
+  p += identificationHeaderSize;
+  
+  if (commentHeader != NULL) {
+      memmove(p, commentHeader, commentHeaderSize);
+  }
+  p += identificationHeaderSize;
+
+  if (setupHeader != NULL) {
+      memmove(p, setupHeader, setupHeaderSize);
+  }
+
   // Having set up the 'packed configuration headers', Base-64-encode this, for our result:
   char* base64PackedHeaders = base64Encode((char const*)packedHeaders, packedHeadersSize);
   delete[] packedHeaders;

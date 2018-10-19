@@ -298,7 +298,7 @@ SOAP_FMAC3 int SOAP_FMAC4 soap_out_ns1__AccessPointInfo(struct soap *soap, const
 {
 	if (a->token)
 		soap_set_attr(soap, "token", soap_ns2__ReferenceToken2s(soap, a->token), 1);
-	 char *soap_tmp_EntityType = soap_QName2s(soap, a->EntityType);
+	 const char *soap_tmp_EntityType = soap_QName2s(soap, a->EntityType);
 	(void)soap; (void)tag; (void)id; (void)a; (void)type; /* appease -Wall -Werror */
 	if (soap_element_begin_out(soap, tag, soap_embedded_id(soap, id, a, SOAP_TYPE_ns1__AccessPointInfo), type))
 		return soap->error;

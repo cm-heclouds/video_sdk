@@ -65,13 +65,18 @@ int u(uint32_t BitCount, unsigned char * buf, uint32_t &nStartBit)
 int h264_decode_seq_parameter_set(unsigned char * buf, uint32_t nLen, unsigned int &Width, unsigned int &Height)
 {
     uint32_t StartBit = 0;
-	int log2_max_pic_order_cnt_lsb_minus4;
+#if 0 /* set but not used */
+    int log2_max_pic_order_cnt_lsb_minus4;
+#endif
+    #if 0 /* unused variables */
     int forbidden_zero_bit = u(1, buf, StartBit);
     int nal_ref_idc = u(2, buf, StartBit);
+    #endif
     int nal_unit_type = u(5, buf, StartBit);
     if (nal_unit_type == 7)
     {
         int profile_idc = u(8, buf, StartBit);
+        #if 0 /* unused variables */
         int constraint_set0_flag = u(1, buf, StartBit);//(buf[1] & 0x80)>>7;
         int constraint_set1_flag = u(1, buf, StartBit);//(buf[1] & 0x40)>>6;
         int constraint_set2_flag = u(1, buf, StartBit);//(buf[1] & 0x20)>>5;
@@ -80,35 +85,48 @@ int h264_decode_seq_parameter_set(unsigned char * buf, uint32_t nLen, unsigned i
         int level_idc = u(8, buf, StartBit);
 
         int seq_parameter_set_id = Ue(buf, nLen, StartBit);
+        #endif
 
         if (profile_idc == 100 || profile_idc == 110 ||
             profile_idc == 122 || profile_idc == 144)
         {
+            #if 0 /* unused variable */
             int chroma_format_idc = Ue(buf, nLen, StartBit);
             if (chroma_format_idc == 3)
                 int residual_colour_transform_flag = u(1, buf, StartBit);
+            #endif
+            
+            #if 0 /* unused variable */
             int bit_depth_luma_minus8 = Ue(buf, nLen, StartBit);
             int bit_depth_chroma_minus8 = Ue(buf, nLen, StartBit);
             int qpprime_y_zero_transform_bypass_flag = u(1, buf, StartBit);
+            #endif
             int seq_scaling_matrix_present_flag = u(1, buf, StartBit);
-
+            #if 0 /* variable set but not used */
             int seq_scaling_list_present_flag[8];
+            #endif
             if (seq_scaling_matrix_present_flag)
             {
                 for (int i = 0; i < 8; i++) {
-                    seq_scaling_list_present_flag[i] = u(1, buf, StartBit);
+                    /* variable set but not used */
+                    /* seq_scaling_list_present_flag[i] =*/(void)u(1, buf, StartBit);
                 }
             }
         }
+        #if 0 /* unused variable */
         int log2_max_frame_num_minus4 = Ue(buf, nLen, StartBit);
+        #endif
         int pic_order_cnt_type = Ue(buf, nLen, StartBit);
         if (pic_order_cnt_type == 0)
-            log2_max_pic_order_cnt_lsb_minus4 = Ue(buf, nLen, StartBit);
+            /* set but not used */
+            /* log2_max_pic_order_cnt_lsb_minus4 =*/(void)Ue(buf, nLen, StartBit);
         else if (pic_order_cnt_type == 1)
         {
+            #if 0 /* unused variables */
             int delta_pic_order_always_zero_flag = u(1, buf, StartBit);
             int offset_for_non_ref_pic = Se(buf, nLen, StartBit);
             int offset_for_top_to_bottom_field = Se(buf, nLen, StartBit);
+            #endif
             int num_ref_frames_in_pic_order_cnt_cycle = Ue(buf, nLen, StartBit);
 
             int *offset_for_ref_frame = new int[num_ref_frames_in_pic_order_cnt_cycle];
@@ -116,8 +134,11 @@ int h264_decode_seq_parameter_set(unsigned char * buf, uint32_t nLen, unsigned i
                 offset_for_ref_frame[i] = Se(buf, nLen, StartBit);
             delete[] offset_for_ref_frame;
         }
-        int num_ref_frames = Ue(buf, nLen, StartBit);
+        /* set but not used */
+        /* int num_ref_frames = */(void)Ue(buf, nLen, StartBit);
+        #if 0 /* unssed variable */
         int gaps_in_frame_num_value_allowed_flag = u(1, buf, StartBit);
+        #endif
         int pic_width_in_mbs_minus1 = Ue(buf, nLen, StartBit);
         int pic_height_in_map_units_minus1 = Ue(buf, nLen, StartBit);
 

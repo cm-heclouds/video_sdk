@@ -1,0 +1,9 @@
+SET(CMAKE_SYSTEM_NAME Linux)
+SET(TOOLCHAIN_DIR "/home/jason/toolchain_gnueabi-4.4.0_ARMv5TE/usr/")
+SET(CMAKE_FIND_ROOT_PATH "${TOOLCHAIN_DIR}")
+SET(CMAKE_C_COMPILER "${TOOLCHAIN_DIR}/bin/arm-unknown-linux-uclibcgnueabi-gcc")
+SET(CMAKE_CXX_COMPILER "${TOOLCHAIN_DIR}/bin/arm-unknown-linux-uclibcgnueabi-g++")
+SET(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
+#for libraries and headers in the target directories
+#SET(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
+#SET(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)

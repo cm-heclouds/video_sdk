@@ -7,13 +7,12 @@
 #include "cJSON.h"
 #include "sample_config.h"
 
-struct sample_onvif_cfg
-{
+struct sample_onvif_cfg {
 	struct _device_profile  profile;
 
-	struct _onvif_channel*  channels;
+	struct _onvif_channel  *channels;
 
-	struct _onvif_rvod*  rovds;
+	struct _onvif_rvod  *rovds;
 
 	device_onvif_cluster_t *cluster;
 
@@ -24,8 +23,35 @@ struct sample_onvif_cfg
 
 struct sample_onvif_cfg onvif_cfg;
 
+/* remark@: windows上不支持中文命名的视频文件 */
+static int cfg_get_rvod_size(const char  *rvod)
+{
+	int size = 0;
+	FILE *fp = NULL;
+
+	if (NULL == rvod) {
+		return size;
+	}
+
+	fp = fopen(rvod, "r");
+	if (NULL == fp) {
+		return size;
+	}
+
+	if (-1 == fseek(fp, 0L, SEEK_END)) {
+		fclose(fp);
+		return size;
+	}
+
+	size = ftell(fp);
+
+	fclose(fp);
+
+	return size;
+}
+
 #define DOUBLEDWORD 8
-int cfg_initilize(const char * cfgpath)
+int cfg_initilize(const char *cfgpath)
 {
 	int filesize = 0;
 #ifdef ONT_DEBUG
@@ -38,8 +64,8 @@ int cfg_initilize(const char * cfgpath)
 	char *url, *user, *pass, *title, *desc;
 
 	char *end = NULL;
-	if (!hfile)
-	{
+
+	if (!hfile) {
 		printf("not found the config file[config.json]\n");
 		getchar();
 		exit(0);
@@ -47,24 +73,22 @@ int cfg_initilize(const char * cfgpath)
 	fseek(hfile, 0, SEEK_END);
 	filesize = ftell(hfile);
 	fseek(hfile, 0, SEEK_SET);
-	char *dstaddr = ont_platform_malloc(filesize+4);
-	while (!feof(hfile))
-	{
+	char *dstaddr = ont_platform_malloc(filesize + 4);
+	while (!feof(hfile)) {
 		fread(dstaddr + i, 1, 1, hfile);
 		i++;
 	}
 	dstaddr[i] = '\0';
 
-	json = cJSON_ParseWithOpts(dstaddr, &end, 0);
+	json = cJSON_ParseWithOpts(dstaddr, (const char **)&end, 0);
 
 	cJSON *item;
 	/*
 	* Get device profile
 	*/
 	item = cJSON_GetObjectItem(json, "profile");
-	if (!item)
-	{
-	    printf("config file error\n");
+	if (!item) {
+		printf("config file error\n");
 		getchar();
 		exit(0);
 	}
@@ -80,9 +104,8 @@ int cfg_initilize(const char * cfgpath)
 	int j = cJSON_GetArraySize(cJSON_GetObjectItem(json, "onvif"));
 	onvif_cfg.channelnum = j;
 	onvif_cfg.channels = ont_platform_malloc(j * sizeof(struct _onvif_channel));
-	
-	for (i = 0; i < j; i++)
-	{
+
+	for (i = 0; i < j; i++) {
 		item = cJSON_GetArrayItem(cJSON_GetObjectItem(json, "onvif"), i);
 		url = cJSON_GetObjectItem(item, "url")->valuestring;
 		user = cJSON_GetObjectItem(item, "user")->valuestring;
@@ -99,11 +122,11 @@ int cfg_initilize(const char * cfgpath)
 
 
 	/*
-	 * Get rvods 
+	 * Get rvods
 	 */
 	int k = cJSON_GetArraySize(cJSON_GetObjectItem(json, "rvod"));
 	onvif_cfg.rovds = ont_platform_malloc(k * sizeof(struct _onvif_rvod));
-		
+
 
 	int  channel_id;
 	char *location;
@@ -111,45 +134,48 @@ int cfg_initilize(const char * cfgpath)
 	int year1, month1, day1, hour1, min1, sec1;
 	int year2, month2, day2, hour2, min2, sec2;
 	int t = 0;
+	int size = 0;
 
-	for (i = 0; i < k; i++)
-	{
+	for (i = 0; i < k; i++) {
 		item = cJSON_GetArrayItem(cJSON_GetObjectItem(json, "rvod"), i);
 
 		channel_id = cJSON_GetObjectItem(item, "channel_id")->valueint;
 		location = cJSON_GetObjectItem(item, "location")->valuestring;
 
+		/* get size of rvod */
+		if (NULL != location) {
+			size = cfg_get_rvod_size(location);
+		}
+
 		beginTime = cJSON_GetObjectItem(item, "beginTime")->valuestring;
 		endTime = cJSON_GetObjectItem(item, "endTime")->valuestring;
 		videodesc = cJSON_GetObjectItem(item, "videoTitle")->valuestring;
+
 		sscanf(beginTime, "%d-%d-%d %d:%d:%d", &year1, &month1, &day1, &hour1, &min1, &sec1);
 		sscanf(endTime, "%d-%d-%d %d:%d:%d", &year2, &month2, &day2, &hour2, &min2, &sec2);
 		int tm1 = year1 * 10000 + month1 * 100 + day1;
 		int tm2 = year2 * 10000 + month2 * 100 + day2;
-		if (tm1 > tm2)
-		{
-			ONT_LOG1(ONTLL_ERROR, "invalid time parameter for %s", videodesc);
+		if (tm1 > tm2) {
+			RTMP_Log(RTMP_LOGERROR, "invalid time parameter for %s", videodesc);
 			continue;
 		}
-		if (tm1 == tm2)
-		{
+		if (tm1 == tm2) {
 			tm1 = hour1 * 3600 + min1 * 60 + sec1;
 			tm2 = hour2 * 3600 + min2 * 60 + sec2;
-			if (tm1 >= tm2)
-			{
-				ONT_LOG1(ONTLL_ERROR, "invalid time parameter for %s", videodesc);
+			if (tm1 >= tm2) {
+				RTMP_Log(RTMP_LOGERROR, "invalid time parameter for %s", videodesc);
 				continue;
 			}
 		}
 
-        onvif_cfg.rovdnum = t;
-        if (cfg_get_rvod(channel_id, beginTime, endTime))
-        {
-			ONT_LOG3(ONTLL_ERROR, "rvod config [channel_id : %d, beginTime : %s , endTime :%s ] already existing.", channel_id, beginTime, endTime);
+		onvif_cfg.rovdnum = t;
+		if (cfg_get_rvod(channel_id, beginTime, endTime)) {
+			RTMP_Log(RTMP_LOGERROR, "rvod config [channel_id : %d, beginTime : %s , endTime :%s ] already existing.", channel_id, beginTime, endTime);
 			continue;
-        }
-        
+		}
+
 		onvif_cfg.rovds[t].channelid = channel_id;
+		onvif_cfg.rovds[t].size = size;
 		ont_platform_snprintf(onvif_cfg.rovds[t].location, sizeof(onvif_cfg.rovds[t].location), location);
 		ont_platform_snprintf(onvif_cfg.rovds[t].beginTime, sizeof(onvif_cfg.rovds[t].beginTime), beginTime);
 		ont_platform_snprintf(onvif_cfg.rovds[t].endTime, sizeof(onvif_cfg.rovds[t].endTime), endTime);
@@ -163,7 +189,7 @@ int cfg_initilize(const char * cfgpath)
 	return 0;
 }
 
-struct _device_profile * cfg_get_profile()
+struct _device_profile *cfg_get_profile()
 {
 	return &onvif_cfg.profile;
 }
@@ -174,18 +200,16 @@ int  cfg_get_channel_num()
 }
 
 
-struct _onvif_channel * cfg_get_channels()
+struct _onvif_channel *cfg_get_channels()
 {
 	return onvif_cfg.channels;
 }
 
-struct _onvif_channel * cfg_get_channel(int channelid)
+struct _onvif_channel *cfg_get_channel(int channelid)
 {
-    int i =0;
-	for (; i < onvif_cfg.channelnum;i++)
-	{
-		if (onvif_cfg.channels[i].channelid == channelid)
-		{
+	int i = 0;
+	for (; i < onvif_cfg.channelnum; i++) {
+		if (onvif_cfg.channels[i].channelid == channelid) {
 			return &onvif_cfg.channels[i];
 		}
 	}
@@ -195,11 +219,9 @@ struct _onvif_channel * cfg_get_channel(int channelid)
 int  cfg_get_rvod_num(int channelid)
 {
 	int i = 0;
-	int ret=0;
-	for (; i < onvif_cfg.rovdnum; i++)
-	{
-		if (onvif_cfg.rovds[i].channelid == channelid)		
-		{
+	int ret = 0;
+	for (; i < onvif_cfg.rovdnum; i++) {
+		if (onvif_cfg.rovds[i].channelid == channelid) {
 			ret++;
 		}
 	}
@@ -211,28 +233,26 @@ int cfg_get_rvod_nums()
 	return onvif_cfg.rovdnum;
 }
 
-struct _onvif_rvod * cfg_get_rvods()
+struct _onvif_rvod *cfg_get_rvods()
 {
 	return onvif_cfg.rovds;
 }
 
-struct _onvif_rvod * cfg_get_rvod(int channelid, char * begin, char* end)
+struct _onvif_rvod *cfg_get_rvod(int channelid, char *begin, char *end)
 {
-    int i = 0;
-	for (; i < onvif_cfg.rovdnum; i++)
-	{
+	int i = 0;
+	for (; i < onvif_cfg.rovdnum; i++) {
 		if (onvif_cfg.rovds[i].channelid == channelid
-			&& strcmp(begin, onvif_cfg.rovds[i].beginTime) == 0
-			&& strcmp(end, onvif_cfg.rovds[i].endTime) == 0
-			)
-		{
+		    && strcmp(begin, onvif_cfg.rovds[i].beginTime) == 0
+		    && strcmp(end, onvif_cfg.rovds[i].endTime) == 0
+		   ) {
 			return &onvif_cfg.rovds[i];
 		}
 	}
 	return NULL;
 }
 
-device_onvif_cluster_t* cfg_get_cluster( void )
+device_onvif_cluster_t *cfg_get_cluster( void )
 {
 	return onvif_cfg.cluster;
 }

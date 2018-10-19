@@ -8,34 +8,28 @@
 int status_synced(uint32_t nchn)
 {
 	uint32_t chnnum;
-	size_t rsize;
+#if 0 /* rsize set but not used */
+	size_t rsize = 0;
+#endif
 	long fsize = 0;
 	FILE *hfile = fopen(CHANNELINFO_SYNC_FILE, "r+");
-	if (hfile)
-	{
+	if (hfile) {
 		fseek(hfile, 0, SEEK_END);
 		fsize = ftell(hfile);
-		if (fsize >= sizeof(chnnum))
-		{
+		if (fsize >= sizeof(chnnum)) {
 			fseek(hfile, 0, SEEK_SET);
-			rsize = fread(&chnnum, sizeof(chnnum), 1, hfile);
-			if (nchn == chnnum)
-			{
+			/* resize set but not used */
+			/* rsize = */(void)fread(&chnnum, sizeof(chnnum), 1, hfile);
+			if (nchn == chnnum) {
 				return 1;
-			}
-			else
-			{
+			} else {
 				fwrite(&nchn, sizeof(nchn), 1, hfile);
 				return 0;
 			}
-		}
-		else
-		{
+		} else {
 			fwrite(&nchn, sizeof(nchn), 1, hfile);
 		}
-	}
-	else
-	{
+	} else {
 		hfile = fopen(CHANNELINFO_SYNC_FILE, "w+");
 		fwrite(&nchn, sizeof(nchn), 1, hfile);
 		return 0;

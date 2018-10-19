@@ -487,40 +487,15 @@ _end:
     return -1;
 }
 
-#if defined(WIN32) | defined(_WIN32)
-void gettimeofday(struct timeval *tv, void*)
-{
-	if (tv)
-	{
-		FILETIME ft;
-		uint64_t ns = 0;
-
-#ifdef _WIN32_WCE
-		SYSTEMTIME st;
-
-		GetSystemTime(&st);
-		SystemTimeToFileTime(&st, &ft);
-#else
-		GetSystemTimeAsFileTime(&ft);
-#endif
-
-		ns |= ft.dwHighDateTime;
-		ns <<= 32;
-		ns |= ft.dwLowDateTime;
-		ns /= 10;
-		ns -= 11644473600000000ULL;
-		tv->tv_sec = (long)(ns / 1000000UL);
-		tv->tv_usec = (long)(ns % 1000000UL);
-	}
-}
-#endif
 
 int ont_onvifdevice_live_stream_play(void *playctx, const char* push_url, const char* deviceid)
 {
+#if 0 /* unused variable */
     int level = 4;
+#endif
 
-    struct timeval tv;
-    gettimeofday(&tv, NULL);
+    struct ont_timeval tv;
+    ont_gettimeofday(&tv, NULL);
     unsigned long ts = (tv.tv_usec / 1000 + tv.tv_sec * 1000);
 
     /*change the source*/
@@ -541,6 +516,7 @@ int ont_onvifdevice_live_stream_play(void *playctx, const char* push_url, const 
         r->rtsp_client = rtspClient;
     }
 
+    /*restart RTMP client*/
     if (r->rtmp_client) {
         rtmp_stop_publishstream(r->rtmp_client);      
         ont_disable_rtmp_packet_handle(r);
@@ -556,7 +532,15 @@ int ont_onvifdevice_live_stream_play(void *playctx, const char* push_url, const 
 	r->last_sndts = ts;
     if (!r->packDataList) {
         r->packDataList = ont_list_create();
-    }
+	}
+	else
+	{
+		/*reset queue*/
+		t_rtmp_mode_ctx mode_ctx;
+		mode_ctx.type = LIVE_MODE;
+		mode_ctx.onvif_ctx = r;
+		RTMPPackClearqueue(&mode_ctx);
+	}
     return 0;
 }
 
@@ -595,9 +579,9 @@ void* ont_onvifdevice_live_stream_start( void        *penv,
 	r->startts = r->last_sndts = r->last_rcvts = 0;
     r->play_env = penv;
     r->rtsp_level = level;
+    r->key_send = 0;
     if (push_url) {
         r->rtmp_client = (RTMP*)rtmp_create_publishstream(push_url, 10, deviceid);
-		r->key_send = 0;
     }
     do
     {
@@ -628,13 +612,12 @@ void* ont_onvifdevice_live_stream_start( void        *penv,
         {
             break;
         }
-        //openURL(*env, NULL, deviceptr->strPlayurl);
 		r->state = 0;
         r->push_model = 0;
         r->sendmeta[0] = 0;
         r->sendmeta[1] = 0;
         r->packDataList = ont_list_create();
-        //ont_set_rtmp_packet_handle(r, _rtmp_packet_handle_proc, r);
+        
         return r;
     }while (0);
 
@@ -642,10 +625,13 @@ void* ont_onvifdevice_live_stream_start( void        *penv,
         shutdownStream((RTSPClient*)r->rtsp_client, 1);
     }
     if (r->tempBuf){
-        //free(r->tempBuf);
+        free(r->tempBuf);
     }
+
+
     if (r->rtmp_client){
 		rtmp_stop_publishstream(r->rtmp_client);
+        r->rtmp_client=NULL;
     }
     ont_platform_free(r);
     return NULL;
@@ -659,46 +645,46 @@ int ont_onvifdevice_live_stream_singlestep(void *penv, int maxdelay)
 	return 0;
 }
 
-void ont_onvifdevice_live_stream_stop(void *ctx)
+void ont_onvifdevice_rtmp_stop(void *ctx)
 {
     ont_onvif_playctx* r = (ont_onvif_playctx*)ctx;
     
-    ont_list_destroy(r->packDataList);
-    r->packDataList = NULL;
     r->push_model = 0;
 
-    if (r->rtsp_client){
-        shutdownStream((RTSPClient*)r->rtsp_client, 1);
-        r->rtsp_client = NULL;
-    }
-
-    void *rtspClient = openURL(r, NULL, r->rtsp_playurl); //need free the rtspclient resource
-    if (rtspClient)
-    {
-        r->rtsp_client = rtspClient;
-    }
-
-    if (r->tempBuf){
-        free(r->tempBuf);
-        r->tempBuf = NULL;
-    }
     if (r->rtmp_client){
         ont_disable_rtmp_packet_handle(r);
 		rtmp_stop_publishstream(r->rtmp_client);
         r->rtmp_client = NULL;
     }
-
-	r->startts = r->last_sndts = 0;
+    
 	r->state= 0;
     r->sendmeta[0] = 0;
     r->sendmeta[1] = 0;
-    //ont_platform_free(r);
+}
+
+
+void  ont_onvifdevice_live_stream_stop(void *ctx)
+{
+	ont_onvif_playctx* r = (ont_onvif_playctx*)ctx;
+
+	if (r->rtsp_client) {
+		shutdownStream((RTSPClient*)r->rtsp_client, 1);
+		r->rtsp_client = NULL;
+	}
+
+	void *rtspClient = openURL(r, NULL, r->rtsp_playurl); //need free the rtspclient resource
+	if (rtspClient)
+	{
+		r->rtsp_client = rtspClient;
+		r->last_sndts = 0;
+	}
+
 }
 
 
 
 
-extern "C" void* _test_live_stream_start(int channel, const char *push_url, const char*deviceid, int level)
+extern "C" void _test_live_stream_start(int channel, const char *push_url, const char*deviceid, int level)
 {
 	const char*c_url = NULL;
 	// Begin by setting up our usage environment:

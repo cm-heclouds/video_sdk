@@ -541,7 +541,8 @@ int ont_onvifdevice_srvaddr_omit_port(char *tempurl, char *url)
 {
     char *p = NULL;
     int len = 0;
-    if (p = strstr(url, ":80")) {
+    p = strstr(url, ":80");
+    if (NULL != p) {
         memcpy(tempurl, url, p - url);
         tempurl[p-url] = '\0';
         strcat(tempurl, p+3);
@@ -556,11 +557,10 @@ int ont_onvifdevice_srvaddr_omit_port(char *tempurl, char *url)
 int ont_onvifdevice_checkdevice_online( device_onvif_cluster_t *cluster, const char*url )
 {
     device_onvif_discovery_list_t *_gOnvifDeviceDiscoveryPtr = &cluster->onvif_device_discovery_list;
-    char * p = NULL;
     int i = 0;
     char tempurl[256];
     char tempSrvAddr[256];
-    ont_onvifdevice_srvaddr_omit_port(tempurl, url);
+    ont_onvifdevice_srvaddr_omit_port(tempurl, (char *)url);
 
     for (i = 0; i < _gOnvifDeviceDiscoveryPtr->number && _gOnvifDeviceDiscoveryPtr->list[i].srvAddr[0] != '\0'; i++) {
         char *srvAddr = _gOnvifDeviceDiscoveryPtr->list[i].srvAddr;
@@ -663,7 +663,7 @@ int ont_onvifdevice_adddevice( device_onvif_cluster_t *cluster,
         return -1;
     }
 
-	ONT_LOG1(ONTLL_INFO, "[info]:url=%s has profiles-------------------------------------------------------:\n", devicePtr->strUrl);
+	RTMP_Log(RTMP_LOGINFO, "[info]:url=%s has profiles-------------------------------------------------------:\n", devicePtr->strUrl);
     for (i = 0; i < 4; i++)
     {
         if (devicePtr->profiles[i].strprofile[0] != '\0')
@@ -673,7 +673,7 @@ int ont_onvifdevice_adddevice( device_onvif_cluster_t *cluster,
             {
                 return -1;
             }
-			ONT_LOG4(ONTLL_INFO, "profile [%d: level=%d bitrate=%d framterate=%d] \n", 
+			RTMP_Log(RTMP_LOGINFO, "profile [%d: level=%d bitrate=%d framterate=%d] \n", 
 				i, 
 				devicePtr->profiles[i].level, 
 				devicePtr->profiles[i].bitrate, 
@@ -708,16 +708,16 @@ void ont_onvifdevice_deldevice( device_onvif_cluster_t *cluster, int channel )
 device_onvif_t* ont_getonvifdevice( device_onvif_cluster_t *cluster, int channelid )
 {
     device_onvif_list_t *_gOnvifDevicePtr = &cluster->onvif_device_list;
-    device_onvif_t *device =  NULL;
-    int i =0;
-    for (i =0; i<_gOnvifDevicePtr->number; i++)
+    int i = 0;
+    
+    for (i = 0; i<_gOnvifDevicePtr->number; i++)
     {
         if (_gOnvifDevicePtr->list[i].channelid == channelid)
         {
             return &_gOnvifDevicePtr->list[i];
         }
     }
-    ONT_LOG1(ONTLL_INFO, "no this channel %d\n", channelid);     
+    RTMP_Log(RTMP_LOGINFO, "no this channel %d\n", channelid);     
     return  NULL;
 }
 
@@ -752,7 +752,7 @@ char* ont_geturl_level( device_onvif_t *devicePtr,
 	return NULL;
 }
 
-static _ont_onvifdevice_stop(device_onvif_t *devicePtr)
+static int _ont_onvifdevice_stop(device_onvif_t *devicePtr)
 {
     static struct soap *soap;
     struct SOAP_ENV__Header header = { 0 };
@@ -812,7 +812,6 @@ int ont_onvifdevice_ptz( device_onvif_cluster_t *cluster,
 
 	static struct soap *soap;
 	device_onvif_t *devicePtr;
-	int i = 0;
 	int result = 0;
 	struct SOAP_ENV__Header header = { 0 };
 	struct tt__PTZSpeed ptzSpeed = { NULL };

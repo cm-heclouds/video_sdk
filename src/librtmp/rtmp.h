@@ -31,7 +31,7 @@
  *email:fu.jianbo@chinamobile.iot.com
  */
 
-#if !defined(NO_CRYPTO) && !defined(CRYPTO)
+#if defined(PROTOCOL_RTMP_CRYPT)
 #define CRYPTO
 #endif
 
@@ -76,7 +76,7 @@ extern "C"
 
 /*#define	RTMP_CHANNELS	65600*/
 
-#define	RTMP_CHANNELS	16
+#define	RTMP_CHANNELS	64 /*max csid from onenet rtmp server*/
 
   extern const char RTMPProtocolStringsLower[][7];
   extern const AVal RTMP_DefaultFlashVer;
@@ -94,7 +94,7 @@ extern "C"
 /*      RTMP_PACKET_TYPE_...                0x07 */
 #define RTMP_PACKET_TYPE_AUDIO              0x08
 #define RTMP_PACKET_TYPE_VIDEO              0x09
-/*      RTMP_PACKET_TYPE_...                0x0A */
+#define RTMP_PACKET_TYPE_SOUND              0x0A
 /*      RTMP_PACKET_TYPE_...                0x0B */
 /*      RTMP_PACKET_TYPE_...                0x0C */
 /*      RTMP_PACKET_TYPE_...                0x0D */
@@ -128,7 +128,7 @@ extern "C"
     uint8_t m_headerType;
     uint8_t m_packetType;
     uint8_t m_hasAbsTimestamp;	/* timestamp absolute or relative? */
-    int m_nChannel;
+    int     m_nChannel;
     uint32_t m_nTimeStamp;	/* timestamp */
     int32_t m_nInfoField2;	/* last 4 bytes in a long header */
     uint32_t m_nBodySize;
@@ -274,6 +274,7 @@ extern "C"
     RTMP_METHOD *m_methodCalls;	/* remote method calls queue */
 
     RTMPPacket *m_vecChannelsIn[RTMP_CHANNELS];
+    
     RTMPPacket *m_vecChannelsOut[RTMP_CHANNELS];
     int m_channelTimestamp[RTMP_CHANNELS];	/* abs timestamp of last packet */
 
@@ -287,10 +288,18 @@ extern "C"
     int m_polling;
     int m_resplen;
     int m_unackd;
-	  rtmp_pause_notify pause_notify;
-	  rtmp_seek_notify  seek_notify;
-	  rtmp_stop_notify  stop_notify;
+	AVal m_clientID;
+    
+      rtmp_pause_notify pause_notify;
+      rtmp_seek_notify  seek_notify;
+      rtmp_stop_notify  stop_notify;
+      rtmp_sound_notify sound_notify;
+      rtmp_video_notify video_notify;  
+
+            
 	  void *rvodCtx;
+      void *soundCtx;
+      void *videoCtx;
 
     RTMP_READ m_read;
     RTMPPacket m_write;

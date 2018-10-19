@@ -58,7 +58,7 @@ private:
 	uint32_t  pps_len;
 	uint32_t  sourcecodec; //
 	unsigned  sendmeta;
-	unsigned  sendaudioheader;
+	unsigned  setaudioheader;
 	unsigned  spspps_changed;
 	ont_onvif_playctx *ctx;
     t_rtmp_mode_ctx  _rtmp_mode_ctx;

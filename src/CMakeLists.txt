@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 2.8.8)
 
 
 project(ont_video C)
@@ -10,11 +10,10 @@ include_directories(
 	${ONT_SDK_ROOT}
 	${ONT_SDK_ROOT}/include
 	${CMAKE_CURRENT_SOURCE_DIR}
-	${ONT_SDK_ROOT}/sample
-	${ONT_SDK_ROOT}/sample/onvif
 	${ONT_SDK_ROOT}/src/librtmp
 	${ONT_SDK_ROOT}/src/cJSON
 	${ONT_SDK_ROOT}/src/mbedtls-2.6.0/include
+	${ONT_SDK_ROOT}/sample/onvif/openssl-1.0.1g/include
 )
 
 if(MSVC)

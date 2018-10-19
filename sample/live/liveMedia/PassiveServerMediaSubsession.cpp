@@ -162,7 +162,9 @@ void PassiveServerMediaSubsession
 
   // Make a record of this client's source - for RTCP RR handling:
   RTCPSourceRecord* source = new RTCPSourceRecord(clientAddress, clientRTCPPort);
-  fClientRTCPSourceRecords->Add((char const*)clientSessionId, source);
+
+  /* add (unsigned long) for -Wint-to-pointer-cast warning of compiler */
+  fClientRTCPSourceRecords->Add((char const*)(unsigned long)clientSessionId, source);
 }
 
 void PassiveServerMediaSubsession::startStream(unsigned clientSessionId,
@@ -189,7 +191,8 @@ void PassiveServerMediaSubsession::startStream(unsigned clientSessionId,
     fRTCPInstance->sendReport();
 
     // Set up the handler for incoming RTCP "RR" packets from this client:
-    RTCPSourceRecord* source = (RTCPSourceRecord*)(fClientRTCPSourceRecords->Lookup((char const*)clientSessionId));
+    /* add (unsigned long) for -Wint-to-poniter-cast warning of compiler */
+    RTCPSourceRecord* source = (RTCPSourceRecord*)(fClientRTCPSourceRecords->Lookup((char const*)(unsigned long)clientSessionId));
     if (source != NULL) {
       fRTCPInstance->setSpecificRRHandler(source->addr, source->port,
 					  rtcpRRHandler, rtcpRRHandlerClientData);
@@ -216,13 +219,15 @@ void PassiveServerMediaSubsession
 
 void PassiveServerMediaSubsession::deleteStream(unsigned clientSessionId, void*& /*streamToken*/) {
   // Lookup and remove the 'RTCPSourceRecord' for this client.  Also turn off RTCP "RR" handling:
-  RTCPSourceRecord* source = (RTCPSourceRecord*)(fClientRTCPSourceRecords->Lookup((char const*)clientSessionId));
+  /* add (unsigned long) for -Wint-to-pointer-cast warning f compiler */
+  RTCPSourceRecord* source = (RTCPSourceRecord*)(fClientRTCPSourceRecords->Lookup((char const*)(unsigned long)clientSessionId));
   if (source != NULL) {
     if (fRTCPInstance != NULL) {
       fRTCPInstance->unsetSpecificRRHandler(source->addr, source->port);
     }
-
-    fClientRTCPSourceRecords->Remove((char const*)clientSessionId);
+    
+    /* add (unsigned long) for -Wint-to-pointer-cast warning of compiler */
+    fClientRTCPSourceRecords->Remove((char const*)(unsigned long)clientSessionId);
     delete source;
   }
 }

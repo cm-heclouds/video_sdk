@@ -5,11 +5,10 @@
 extern "C" {
 #endif
 
-struct ont_socket_t
-{
-    int fd;
-    char ip[40]; /*remote ip address*/
-    uint16_t port; /*remote port*/
+struct ont_socket_t {
+	int fd;
+	char ip[40]; /*remote ip address*/
+	uint16_t port; /*remote port*/
 };
 
 #ifdef __cplusplus

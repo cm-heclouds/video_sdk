@@ -4,7 +4,6 @@ set(ONT_SDK_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/..)
 
 SET(EXECUTABLE_OUTPUT_PATH ${ONT_SDK_ROOT}/bin)
 
-include_directories(${ONT_SDK_ROOT}/protocols/base)
 include_directories(${ONT_SDK_ROOT}/sample)
 include_directories(${ONT_SDK_ROOT}/sample/onvif)
 include_directories(${ONT_SDK_ROOT}/sample/mp4v2/include
@@ -13,8 +12,7 @@ include_directories(${ONT_SDK_ROOT}/sample/mp4v2/include
 					${ONT_SDK_ROOT}/sample/live/UsageEnvironment/include)
 include_directories(${ONT_SDK_ROOT}/src/cJSON)
 include_directories(${ONT_SDK_ROOT}/src/librtmp)
-include_directories(${ONT_SDK_ROOT}/protocols/video/ont)
-include_directories(${ONT_SDK_ROOT}/protocols/video/ont/cJSON)
+include_directories(${ONT_SDK_ROOT}/src/mbedtls-2.6.0/include)
 
 if(MSVC)
     file(GLOB_RECURSE INC_TEMP FOLLOW_SYMLINKS ${CMAKE_CURRENT_SOURCE_DIR}/*.h)
@@ -38,26 +36,26 @@ endif(_MP4V2)
 
 aux_source_directory(${CMAKE_CURRENT_SOURCE_DIR} SRC_LIST)
 
-if(WIN32 AND _ONVIF)
-    message("set the ssl lib path")
-    message(${CMAKE_BINARY_DIR}/../lib/win)
-    
-    find_library(LIBEASY32MTD_LIBRARY NAMES easy32 libeay32MTd
-             HINTS ${CMAKE_BINARY_DIR}/../lib/win )
-    list(APPEND LIBS ${LIBEASY32MTD_LIBRARY} )
-    
-    find_library(SSLEASY32MTD_LIBRARY NAMES ssleasy ssleay32MTd
-             HINTS ${CMAKE_BINARY_DIR}/../lib/win )
-    list(APPEND LIBS ${SSLEASY32MTD_LIBRARY} )
-endif(WIN32 AND _ONVIF)
-
 if(WIN32)
-	find_library(RSALIB NAMES mbedTLS
-                HINTS ${CMAKE_BINARY_DIR}/../lib/win )
-	list(APPEND LIBS ${RSALIB} )
-	list(APPEND LIBS ws2_32 )
-endif(WIN32)
+    if (_ONVIF OR _DPROTOCOL_SECURITY_OPENSSL)
+		message("set the ssl lib path")
+		message(${CMAKE_BINARY_DIR}/../lib/win)
+		find_library(LIBEASY32MTD_LIBRARY NAMES easy32 libeay32MTd
+				 HINTS ${CMAKE_BINARY_DIR}/../lib/win )
+		list(APPEND LIBS ${LIBEASY32MTD_LIBRARY} )
+		
+		find_library(SSLEASY32MTD_LIBRARY NAMES ssleasy ssleay32MTd
+				 HINTS ${CMAKE_BINARY_DIR}/../lib/win )
+		list(APPEND LIBS ${SSLEASY32MTD_LIBRARY} )
+	endif()
 
+    if (_PROTOCOL_SECURITY_MBEDTLS)
+		find_library(RSALIB NAMES mbedTLS
+					HINTS ${CMAKE_BINARY_DIR}/../lib/win )
+		list(APPEND LIBS ${RSALIB} )
+	endif()
+	list(APPEND LIBS ws2_32 )
+endif()
 
 if(_MP4V2)
     list(APPEND LIBS ${MP4V2} )
@@ -70,21 +68,27 @@ if(UNIX OR CYGWIN)
     list(APPEND LIBS stdc++)
 
     if(ARM-LINUX)
-	    if(_ONVIF)
+	    if(_ONVIF OR _DPROTOCOL_SECURITY_OPENSSL)
 			list(APPEND LIBS libssl.a) 
 			list(APPEND LIBS libcrypto.a)    
-		endif(_ONVIF)
-		find_library(RSALIB NAMES mbedcrypto
-		     HINTS ${CMAKE_BINARY_DIR}/../lib/arm )
-		list(APPEND LIBS ${RSALIB} )
+		endif()
+		
+		if(_PROTOCOL_SECURITY_MBEDTLS)
+			find_library(RSALIB NAMES mbedcrypto
+				 HINTS ${CMAKE_BINARY_DIR}/../lib/arm )
+		    list(APPEND LIBS ${RSALIB} )
+		endif()
     else()
-	    if(_ONVIF)
+	    if(_ONVIF OR _DPROTOCOL_SECURITY_OPENSSL )
 			list(APPEND LIBS ssl) 
 			list(APPEND LIBS crypto)
-		endif(_ONVIF)
-	    find_library(RSALIB NAMES mbedcrypto
-		     HINTS ${CMAKE_BINARY_DIR}/../lib/linux )
-		list(APPEND LIBS ${RSALIB} )
+		endif()
+		
+	    if(_PROTOCOL_SECURITY_MBEDTLS)
+	        find_library(RSALIB NAMES mbedcrypto
+		         HINTS ${CMAKE_BINARY_DIR}/../lib/linux )
+		    list(APPEND LIBS ${RSALIB} )
+	    endif()		
     endif(ARM-LINUX)
 			 
     list(APPEND LIBS dl)
@@ -96,4 +100,4 @@ add_executable(
     ${SRC_LIST}
     $<TARGET_OBJECTS:${PLATFORM}_o>)
 
-target_link_libraries(sample_${VIDEO}  ${VIDEO} ${LIBS})
+target_link_libraries(sample_${VIDEO} ${VIDEO}  ${LIBS})

@@ -120,8 +120,9 @@ void MPEG1or2VideoRTPSink
       }
     } else {
       // The first 4 bytes aren't a code that we recognize.
+      /* add (unsigned long) cast for -Wint-to-pointer-cast warning of compiler */
       envir() << "Warning: MPEG1or2VideoRTPSink::doSpecialFrameHandling saw strange first 4 bytes "
-	      << (void*)startCode << ", but we're not a fragment\n";
+	      << (void*)((unsigned long)startCode) << ", but we're not a fragment\n";
     }
   } else {
     // We're a fragment (other than the first) of a slice.

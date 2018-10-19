@@ -1,6 +1,13 @@
-#/bin/sh
-cd ..
-mkdir video_sample_build
-cd video_sample_build
-cmake .. -DCMAKE_BUILD_TYPE=Debug  -D_MP4V2=1 -D_ONVIF=1 -D_SAMPLE=1
+#!/bin/sh
+VIDEO_SDK_ROOT=../
+BUILD_TYPE=Release #Debug
+BUILD_DIR=video_sample_build_on_linux
+
+cd $VIDEO_SDK_ROOT
+mkdir $BUILD_DIR
+cd    $BUILD_DIR
+
+# _ONVIF, _MP4V2, _PROTOCOL_SECURITY_MBEDTL are optional
+cmake .. -DCAMKE_BUILD_TYPE=$BUILD_TYPE -D_SAMPLE=1 -D_ONVIF=1 -D_MP4V2=1 -D_PROTOCOL_SECURITY_MBEDTLS=1
 make -j4
+

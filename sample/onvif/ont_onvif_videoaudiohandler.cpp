@@ -10,6 +10,7 @@
 #define AUDIO_SINK_RECEIVE_BUFFER_SIZE 1000
 
 
+/*if want to use ont rvod, must use queue mode*/
 #define SEND_USE_QUEUE    1
 
 ONTVideoAudioSink* ONTVideoAudioSink::createNew( MediaSubsession& subsession,
@@ -97,7 +98,7 @@ ONTVideoAudioSink::ONTVideoAudioSink(MediaSubsession& subsession,
 			{
 				if ((_p_extra = parseGeneralConfigStr(subsession.fmtp_config(),
 					_i_extra)))
-		            {  
+				{  
 					p_extra = new char[_i_extra];
 					memcpy(p_extra, _p_extra, _i_extra);
 					i_extra = _i_extra;
@@ -121,7 +122,7 @@ ONTVideoAudioSink::ONTVideoAudioSink(MediaSubsession& subsession,
     }
 
     sendmeta = 0;
-    sendaudioheader = 0;
+	setaudioheader = 0;
     fStreamId = strDup(streamId);
 
 }
@@ -292,11 +293,12 @@ int ONTVideoAudioSink::handleVideoFrame(unsigned frameSize, unsigned numTruncate
 				playctx->sendmeta[0] = 1;
 #endif
             }
-			if (spspps_changed)
+			if (spspps_changed || playctx->sendmeta[0] == 0)
 			{
 				spspps_changed = 0;
 #ifndef SEND_USE_QUEUE
 				rtmp_send_spspps(playctx->rtmp_client, (unsigned char*)this->latestSps, this->sps_len, (unsigned char *)this->latestPps, this->pps_len, deltaTs);
+				playctx->sendmeta[0] = 1;
 #else
 				mspd = new RTMPMetaSpsPpsData();
 				mspd->sps_len = this->sps_len > sizeof(mspd->latestSps) ? sizeof(mspd->latestSps) : this->sps_len;
@@ -324,11 +326,6 @@ int ONTVideoAudioSink::handleVideoFrame(unsigned frameSize, unsigned numTruncate
 #endif
         }
         else { /*p frame, etc.*/
-			if (!playctx->key_send)
-			{
-				offset += parseSize;
-				continue;
-			}
             if (playctx->tempBufSize < parseSize + 9) /*need reserve 9 bytes for FLV video tag*/
             {
                 free(playctx->tempBuf);
@@ -362,55 +359,42 @@ int ONTVideoAudioSink::handleAACFrame(unsigned frameSize, unsigned numTruncatedB
 	{
 		return 0;
 	}
-    if (sendaudioheader == 0 || playctx->sendmeta[1] == 0)
+    if (setaudioheader == 0)
     {
+		setaudioheader = 1;
 		unsigned char audio_data[3];
-		audio_data[0] = 0x00;
-		audio_data[1] = p_extra[0];
-		audio_data[2] = p_extra[1];
-		sendaudioheader = 1;
-
-#ifndef SEND_USE_QUEUE      
+		playctx->audio_seq[0] = audio_data[1] = p_extra[0];
+		playctx->audio_seq[1] = audio_data[2] = p_extra[1];
+#ifndef SEND_USE_QUEUE  
 		rtmp_send_audiodata(playctx->rtmp_client, audioTag, audio_data, 3, 0, RTMP_PACKET_SIZE_LARGE);
 		playctx->sendmeta[1] = 1;
 #else
-        RTMPVideoAudioCtl *ctl = new RTMPVideoAudioCtl();
-        ctl->isAudioHeader = 1;
-        RTMPAudioHeaderData  *ahd  =   new RTMPAudioHeaderData();
-        ahd->audioTag = audioTag;
-        ahd->audiotype = RTMP_PACKET_SIZE_LARGE;
-        RTMPPackEnqueue(&_rtmp_mode_ctx, audio_data, 3, 0, CODEC_MPEG4A, ahd, ctl);
-#endif
 
+#endif
     }
 	fReceiveBuffer[0] = 0x01;
 #ifndef SEND_USE_QUEUE       
     rtmp_send_audiodata(playctx->rtmp_client, audioTag, fReceiveBuffer, frameSize + 1, deltaTs, RTMP_PACKET_SIZE_LARGE);
 #else
-	RTMPVideoAudioCtl *ctl = new RTMPVideoAudioCtl();
-	ctl->isAudioHeader = 0;
+
 
 	RTMPAudioHeaderData  *ahd = new RTMPAudioHeaderData();
 	ahd->audioTag = audioTag;
 	ahd->audiotype = RTMP_PACKET_SIZE_LARGE;
 
-    RTMPPackEnqueue(&_rtmp_mode_ctx, fReceiveBuffer, frameSize + 1, deltaTs, CODEC_MPEG4A, ahd, ctl);
+    RTMPPackEnqueue(&_rtmp_mode_ctx, fReceiveBuffer, frameSize + 1, deltaTs, CODEC_MPEG4A, ahd, NULL);
 #endif
 
     return 0;
 }
-
-#if defined(WIN32) | defined(_WIN32)
-void gettimeofday(struct timeval *tv, void*);
-#endif
 
 
 void ONTVideoAudioSink::afterGettingFrame(void* clientData, unsigned frameSize, unsigned numTruncatedBytes,
 struct timeval presentationTime, unsigned durationInMicroseconds) {
     ONTVideoAudioSink* sink = (ONTVideoAudioSink*)clientData;
     unsigned long ts = (presentationTime.tv_usec / 1000 + presentationTime.tv_sec * 1000);
-	struct timeval tv;
-	gettimeofday(&tv, NULL);
+	struct ont_timeval tv;
+	ont_gettimeofday(&tv, NULL);
 	unsigned long ts2 = (tv.tv_usec / 1000 + tv.tv_sec * 1000);
 
 	ont_onvif_playctx *playctx = (ont_onvif_playctx*)sink->ctx;
@@ -428,12 +412,14 @@ struct timeval presentationTime, unsigned durationInMicroseconds) {
 
     playctx->last_rcvts = ts2;
 
+#if 0
     if (!playctx->push_model)
     {
 		playctx->startts = 0;
 		sink->continuePlaying();
 		return;
     }
+#endif
 
 	playctx->last_sndts = ts2;
 
@@ -463,7 +449,7 @@ void ONTVideoAudioSink::closure(void* clientData)
 	ONTVideoAudioSink* sink = (ONTVideoAudioSink*)clientData;
 	ont_onvif_playctx *playctx = (ont_onvif_playctx*)sink->ctx;
 	playctx->state = 1;
-    RTMP_Log(RTMP_LOGDEBUG, "close");
+    RTMP_Log(RTMP_LOGINFO, "close");
 	sink->onSourceClosure();
 }
 

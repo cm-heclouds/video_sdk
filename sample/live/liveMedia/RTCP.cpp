@@ -536,7 +536,14 @@ void RTCPInstance
       if (length > packetSize) break;
 
       // Assume that each RTCP subpacket begins with a 4-byte SSRC:
+#if 0 /* for -Wmisleading-indentation warning of compiler */
       if (length < 4) break; length -= 4;
+#endif
+      if (length < 4) {
+          break;
+      }
+      length -= 4;
+
       reportSenderSSRC = ntohl(*(u_int32_t*)pkt); ADVANCE(4);
 #ifdef HACK_FOR_CHROME_WEBRTC_BUG
       if (reportSenderSSRC == 0x00000001 && pt == RTCP_PT_RR) {
@@ -554,7 +561,13 @@ void RTCPInstance
 #ifdef DEBUG
 	  fprintf(stderr, "SR\n");
 #endif
+#if 0 /* for -Wmisleading-indentation warning of compiler */
 	  if (length < 20) break; length -= 20; 
+#endif
+      if (length < 20) {
+          break;
+      }
+      length -= 20;
 	  
 	  break; //can not get presentation time precisely while playing DAHUA RTSP server.
 	         //not synchronized RTCP timestamp, add by jason.fu 20161220, fu.jianbo@iot.chinamobile.com

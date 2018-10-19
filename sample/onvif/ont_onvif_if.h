@@ -2,6 +2,7 @@
 #define _ONT_ONVIF_IF_H_
 
 #include "ont_list.h"
+#include "rtmp_if.h"
 
 # ifdef __cplusplus
 extern "C" {
@@ -18,6 +19,7 @@ typedef struct ont_onvif_playctx_t {
 	unsigned char key_send;
 	void *play_env;
 	unsigned long startts;
+    char audio_seq[2];
 	unsigned long last_sndts;/*latest send timestamp*/
     int channel;
 	RTMPMetadata meta;
@@ -35,7 +37,6 @@ typedef struct ont_onvif_playctx_t {
 }ont_onvif_playctx;
 
 
-
 int ont_onvifdevice_live_stream_play(void *playctx, const char* push_url, const char* deviceid);
 void* ont_onvifdevice_live_stream_start( void        *env,
                                          void        *cluster,
@@ -47,8 +48,11 @@ void* ont_onvifdevice_live_stream_start( void        *env,
 int ont_onvifdevice_stream_ctrl(void *playctx, int level);
 int ont_onvifdevice_live_stream_singlestep(void *env, int maxdelay);
 
+/*stop rtmp publish, keep local rtsp play*/
 void ont_onvifdevice_live_stream_stop(void *playctx);
 
+
+void ont_onvifdevice_rtmp_stop(void *playctx);
 
 # ifdef __cplusplus
 }

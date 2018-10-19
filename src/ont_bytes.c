@@ -57,13 +57,13 @@ uint64_t  ont_decodeInt64(const char *data)
 	unsigned char *c = (unsigned char *)data;
 	uint64_t      val;
 	val = (uint64_t)c[0]  << 56 |
-		   (uint64_t)c[1] << 48 | 
-		   (uint64_t)c[2] << 40 | 
-		   (uint64_t)c[3] << 32 |
-		   (uint64_t)c[4] << 24 |
-		   (uint64_t)c[5] << 16 | 
-		   (uint64_t)c[6] << 8  |
-		   c[7];
+	      (uint64_t)c[1] << 48 |
+	      (uint64_t)c[2] << 40 |
+	      (uint64_t)c[3] << 32 |
+	      (uint64_t)c[4] << 24 |
+	      (uint64_t)c[5] << 16 |
+	      (uint64_t)c[6] << 8  |
+	      c[7];
 
 	return val;
 }
@@ -74,8 +74,8 @@ uint32_t ont_decodeInt24(const char *data)
 	unsigned char *c = (unsigned char *)data;
 	uint32_t      val;
 	val = (uint32_t)c[0] << 16 |
-		(uint32_t)c[1] << 8 |
-		(uint32_t)c[2];
+	      (uint32_t)c[1] << 8 |
+	      (uint32_t)c[2];
 
 	return val;
 }
